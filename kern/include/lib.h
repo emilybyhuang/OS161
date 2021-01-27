@@ -72,8 +72,14 @@ extern u_int32_t dbflags;
  */
 #if 0
 #define DEBUG(d, fmt, ...) ((dbflags & (d)) ? kprintf(fmt, __VA_ARGS__) : 0)
+void printWhereAmI(){
+      kprintf("This is %s() from %s, line %d\n",__FUNCTION__, __FILE__, __LINE__);
+}
 #else
 #define DEBUG(d, fmt, args...) ((dbflags & (d)) ? kprintf(fmt, ##args) : 0)
+void printWhereAmI(){
+	print("This is %s() from %s, line %d\n",__FUNCTION__, __FILE__, __LINE__);
+}
 #endif
 
 /*
