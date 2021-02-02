@@ -70,16 +70,17 @@ extern u_int32_t dbflags;
  * way. The second is the gcc way, which, in light of C99, is obsolete -
  * - but the gcc we're using doesn't know the C99 syntax yet.
  */
+
 #if 0
 #define DEBUG(d, fmt, ...) ((dbflags & (d)) ? kprintf(fmt, __VA_ARGS__) : 0)
-void printWhereAmI(){
+/*void printWhereAmI(){
       kprintf("This is %s() from %s, line %d\n",__FUNCTION__, __FILE__, __LINE__);
-}
+}*/
 #else
 #define DEBUG(d, fmt, args...) ((dbflags & (d)) ? kprintf(fmt, ##args) : 0)
-void printWhereAmI(){
-	print("This is %s() from %s, line %d\n",__FUNCTION__, __FILE__, __LINE__);
-}
+/*void printWhereAmI(){
+	kprint("This is %s() from %s, line %d\n",__FUNCTION__, __FILE__, __LINE__);
+}*/
 #endif
 
 /*

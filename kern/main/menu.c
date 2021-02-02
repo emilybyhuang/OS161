@@ -1,5 +1,4 @@
-/*
- * In-kernel menu and command dispatcher.
+ /* In-kernel menu and command dispatcher.
  */
 
 #include <types.h>
@@ -21,6 +20,9 @@
 #define _PATH_SHELL "/bin/sh"
 
 #define MAXMENUARGS  16
+
+int dbflagsMenuOn = 0;
+u_int32_t dbflags = 0x0;
 
 void
 getinterval(time_t s1, u_int32_t ns1, time_t s2, u_int32_t ns2,
@@ -150,6 +152,7 @@ cmd_shell(int nargs, char **args)
 
 	return common_prog(nargs, args);
 }
+
 
 /*
  * Command for changing directory.
@@ -380,6 +383,7 @@ showmenu(const char *name, const char *x[])
 static const char *opsmenu[] = {
 	"[s]       Shell                     ",
 	"[p]       Other program             ",
+	"[dbflags] Debug flags               ",
 	"[mount]   Mount a filesystem        ",
 	"[unmount] Unmount a filesystem      ",
 	"[bootfs]  Set \"boot\" filesystem     ",
@@ -392,6 +396,22 @@ static const char *opsmenu[] = {
 	NULL
 };
 
+static const char *debugFlagsMenu[] = {
+         "[df 1 on/off]        DB_LOCORE       ",
+         "[df 2 on/off]        DB_SYSCALL      ",
+         "[df 3 on/off]        DB_INTERRUPT    ",
+         "[df 4 on/off]        DB_DEVICE       ",
+         "[df 5 on/off]        DB_THREADS      ",
+         "[df 6 on/off]        DB_VM           ",
+         "[df 7 on/off]        DB_EXEC         ",
+         "[df 8 on/off]        DB_VFS          ",
+         "[df 9 on/off]        DB_SFS          ",
+         "[df 10 on/off]       DB_NET          ",
+         "[df 11 on/off]       DB_NETFS        ",
+         "[df 12 on/off]       DB_KMALLOC      ",
+         NULL
+};
+
 static
 int
 cmd_opsmenu(int n, char **a)
@@ -402,6 +422,135 @@ cmd_opsmenu(int n, char **a)
 	showmenu("OS/161 operations menu", opsmenu);
 	return 0;
 }
+
+/*
+*/
+static
+int
+cmd_dbflags(int nargs, char **args)
+{
+	kprintf("In cmd_dbflags\n");
+	//time_t beforesecs, aftersecs, secs;
+	//u_int32_t beforensecs, afternsecs, nsecs;
+//	int position;
+// 	char dfBuf[64];
+//	char *savePtr = dfBuf;
+        (void)nargs;
+        (void)args;
+	showmenu("OS/161 Debug flags", debugFlagsMenu);
+	kprintf("Current value of dbflags is 0x%-4x\n",dbflags);
+	//kprintf("OS/161 kernel [? for menu]:");
+	
+	//should separate these
+	return 0;
+}
+
+static int cmd_df(int nargs, char **args){
+	/*kprintf("nargs: %d\n",nargs);
+	kprintf("args: %s\n",*args);
+	args++;
+	kprintf("args: %s\n",*args);
+	args++;
+	kprintf("args: %s\n",*args);
+	*/
+	
+	//invalid num of args for df command
+	if(nargs != 3)return -1;
+
+	//The "words" enterred will be in args
+	//kprintf("In cmd_df\n");
+	char dfStr[] = "df";
+	char onStr[] = "on";
+	char offStr[] = "off";
+	int position = -1;
+	 if(strcmp(dfStr,*args) == 0){
+		args++;
+         	position = atoi(*args);
+		if(position <= 12 && position >= 1){
+			args++;
+                        if(strcmp(*args,onStr)==0){
+                                dbflags |= 1 << (position-1);
+				return 0;
+			}else if(strcmp(*args,offStr)==0){
+				//You can't turn off something that's not turned on...that case is resolved here tho 0 & 0 is still 0
+                                dbflags &= ~(1 << (position-1));
+				return 0;
+                        }else{
+				//if the last word enterred is not on nor off
+				kprintf("Usage: df nr on/off\n");
+				return 0;
+			}
+                                         /*gettime(&aftersecs, &afternsecs);
+                                         getinterval(beforesecs, beforensecs,
+                                         aftersecs, afternsecs,
+                                         &secs, &nsecs);
+
+                                         kprintf("Operation took %lu.%09lu seconds\n",
+                                         (unsigned long) secs,
+                                         (unsigned long) nsecs);
+                                        */
+					return 0;
+                                 	
+		}else{
+			kprintf("Usage: df nr on/off\n");
+			return 0;
+		}
+	}else{
+		kprintf("Usage: df nr on/off\n");
+		 return 0;
+	}
+}
+/*
+static int cmd_df(int nargs, char **args){
+	//kprintf("In cmd_df\n");
+	if(dbflagsMenuOn == 1){	
+	//kprintf("In while(1)\n");
+		kprintf("Read input\n");
+		kgets(dfBuf, sizeof(dfBuf));		
+		gettime(&beforesecs, &beforensecs);
+		char * thisWord;
+		thisWord = strtok_r(dfBuf, " ",&savePtr);
+		char dfStr[] = "df";
+		char on[] = "on";
+		char off[] = "off";
+	
+		if(strcmp(dfStr,thisWord) == 0){
+			thisWord = strtok_r(savePtr, " ",&savePtr);		
+			position = atoi(thisWord);
+			if(position <= 12 && position >= 1){	
+				thisWord = strtok_r(savePtr, " ",&savePtr);
+				if(strcmp(thisWord,on) == 0 || strcmp(thisWord,off)==0){
+					kprintf("Position : %d\n", position);
+					//save this position
+					if(strcmp(thisWord,on)==0){
+						dbflags |= 1 << (position-1);
+						
+					}else{
+						dbflags &= ~(1 << (position-1));
+					}
+					gettime(&aftersecs, &afternsecs);
+                         		getinterval(beforesecs, beforensecs,
+                                     	aftersecs, afternsecs,
+                                     	&secs, &nsecs);
+
+                         		kprintf("Operation took %lu.%09lu seconds\n",
+                                 	(unsigned long) secs,
+                                 	(unsigned long) nsecs);
+					//kprintf("dbflags=0x%-4x\n",dbflags); 
+					//kprintf("dbflags=0x%x\n", (unsigned char)dbflags);
+					return 0;
+				} 
+			}
+	
+		}
+		//return regardless of the validity
+		kprintf("Invalid df command\n");
+		return 0;
+	}else{
+		return -1;
+	}
+}
+*/
 
 static const char *testmenu[] = {
 	"[at]  Array test                    ",
@@ -485,6 +634,7 @@ static struct {
 	/* operations */
 	{ "s",		cmd_shell },
 	{ "p",		cmd_prog },
+	{ "dbflags",	cmd_dbflags},
 	{ "mount",	cmd_mount },
 	{ "unmount",	cmd_unmount },
 	{ "bootfs",	cmd_bootfs },
@@ -496,7 +646,7 @@ static struct {
 	{ "q",		cmd_quit },
 	{ "exit",	cmd_quit },
 	{ "halt",	cmd_quit },
-
+	{ "df", 	cmd_df},
 #if OPT_SYNCHPROBS
 	/* in-kernel synchronization problems */
 	{ "1a",		catmousesem },
@@ -542,6 +692,8 @@ static
 int
 cmd_dispatch(char *cmd)
 {
+//	kprintf("Command: %s\n", cmd);
+//	kprintf("in cmd_dispatch");
 	time_t beforesecs, aftersecs, secs;
 	u_int32_t beforensecs, afternsecs, nsecs;
 	char *args[MAXMENUARGS];
@@ -553,7 +705,7 @@ cmd_dispatch(char *cmd)
 	for (word = strtok_r(cmd, " \t", &context);
 	     word != NULL;
 	     word = strtok_r(NULL, " \t", &context)) {
-
+	//	kprintf("for loop word: %s\n, word);
 		if (nargs >= MAXMENUARGS) {
 			kprintf("Command line has too many words\n");
 			return E2BIG;
@@ -564,13 +716,13 @@ cmd_dispatch(char *cmd)
 	if (nargs==0) {
 		return 0;
 	}
-
+	//kprintf("Word: %s\n",word);
 	for (i=0; cmdtable[i].name; i++) {
 		if (*cmdtable[i].name && !strcmp(args[0], cmdtable[i].name)) {
 			assert(cmdtable[i].func!=NULL);
 
 			gettime(&beforesecs, &beforensecs);
-
+			//kprintf("NARGS: %d, args: %s\n",nargs, args);
 			result = cmdtable[i].func(nargs, args);
 
 			gettime(&aftersecs, &afternsecs);
@@ -580,11 +732,13 @@ cmd_dispatch(char *cmd)
 
 			kprintf("Operation took %lu.%09lu seconds\n",
 				(unsigned long) secs,
-				(unsigned long) nsecs);
-
+			(unsigned long) nsecs);
+			
 			return result;
 		}
 	}
+
+	//Check for the dbflags menu as well
 
 	kprintf("%s: Command not found\n", args[0]);
 	return EINVAL;
@@ -601,6 +755,8 @@ static
 void
 menu_execute(char *line, int isargs)
 {
+	//kprintf("In menu execute\n");
+	//kprintf("Line: %s\n", line);
 	char *command;
 	char *context;
 	int result;
@@ -613,6 +769,7 @@ menu_execute(char *line, int isargs)
 			kprintf("OS/161 kernel: %s\n", command);
 		}
 
+		//kprintf("Command: %s\n",command);
 		result = cmd_dispatch(command);
 		if (result) {
 			kprintf("Menu command failed: %s\n", strerror(result));
