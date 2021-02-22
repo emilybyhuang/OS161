@@ -75,7 +75,7 @@ catlock(void * unusedpointer,
         (void) unusedpointer;
         (void) catnumber;
 	
-        kprintf("1");
+        kprintf("In cat lock!!!!");
 	if(overallLock == NULL){
             overallLock = lock_create(name);
 	}
@@ -124,7 +124,10 @@ catlock(void * unusedpointer,
             }
             
             
-            //now assume the mouse ate
+            //now assume the cat ate
+            
+            catmouse_eat("cat", catnumber,bowlAteAt+1, i);
+            
             //make bowl available
             whosAtBowl[bowlAteAt] = -1;
             
@@ -134,10 +137,11 @@ catlock(void * unusedpointer,
                 //at least one available
                 cv_signal(catWaiting, overallLock);
             }
-            cv_destroy(catWaiting);
+            
             lock_release(overallLock);
             i++;
-	}	
+	}
+        cv_destroy(catWaiting);	
 }
 	
 
@@ -208,6 +212,9 @@ mouselock(void * unusedpointer,
             
             
             //now assume the mouse ate
+            catmouse_eat("mouse", mousenumber,bowlAteAt+1, i);
+            
+            
             //make bowl available
             whosAtBowl[bowlAteAt] = -1;
             
@@ -218,10 +225,11 @@ mouselock(void * unusedpointer,
                 cv_signal(mouseWaiting, overallLock);
             }
             
-            cv_destroy(mouseWaiting);
+            
             lock_release(overallLock);
             i++;
 	}
+        cv_destroy(mouseWaiting);
 }
 
 
@@ -245,7 +253,7 @@ catmouselock(int nargs,
              char ** args)
 {
         int index, error;
-   
+        kprintf("IN CATMOUSE LOCK\n");
         /*
          * Start NCATS catlock() threads.
          */
