@@ -560,20 +560,45 @@ thread_wakeup(const void *addr)
 	}
 }
 
+
 //using thread_wakeup as a reference
-void thread_wakeup_one(struct cv * thisCV){
+void thread_wakeup_one(const void * addr){
 
-	assert(curspl>0); //will display surspl if it's less than 0
+	int i, result;
+	
+	// meant to be called with interrupts off
+	assert(curspl>0);
+	
+	// This is inefficient. Feel free to improve it.
+	
+	for (i=0; i<array_getnum(sleepers); i++) {
+		struct thread *t = array_getguy(sleepers, i);
+		if (t->t_sleepaddr == addr) {
+			
+			// Remove from list
+			array_remove(sleepers, i);
+			
+			// must look at the same sleepers[i] again
+			i--;
 
-	//wake up the first one waiting
-	if(thisCV -> waitingList != NULL)thread_wakeup(thisCV -> waitingList ->cv);
+			/*
+			 * Because we preallocate during thread_fork,
+			 * this should never fail.
+			 */
+			result = make_runnable(t);
+			assert(result==0);
+                        //just return
+                        return;
+		}
+	}
 	
 }
 
 
 
 
-}
+
+
 /*
  * Return nonzero if there are any threads who are sleeping on "sleep address"
  * ADDR. This is meant to be used only for diagnostic purposes.

@@ -116,7 +116,8 @@ lock_create(const char *name)
 	
 	// add stuff here as needed
 	// initialize the lock
-	lock -> threadWithLock = NULL;
+	//lock -> numOccupiedBowls = 0;
+        lock -> held = 0;//nothing is taking this lock yet
 	return lock;
 }
 
@@ -136,22 +137,22 @@ lock_acquire(struct lock *lock)
 {
 	// Write this
 	// check the lock first
-
-	kprintf("In lock_acquire\n");
-	if(!lock)kprintf("This lock ptr is pointing to null");
+	if(lock == NULL)panic("This lock ptr is pointing to null");
 
 	int spl = splhigh();
-	
-	while(lock -> threadWithLock != NULL ){
-		//this is lock is taken by another thread
-		thread_sleep(lock);
-	}
-
-	//now this thread will take the lock
-	lock -> threadWithLock = curthread;
-	
+        
+        int lockInitialState = lock -> held;
+        //try to get lock
+        if(lockInitialState == 0){
+            lock -> held = 1;
+        }else if(lockInitialState == 1){
+            while(lock -> held  == 1){
+                thread_sleep(lock);//sleep on this lock 
+            }
+            lock -> held = 1;//woke up and get lock now
+        }
+        
 	//enable interrupts
-	//curspl = SPL_HIGH;
 	splx(spl);
 
 	(void)lock;  // suppress warning until code gets written
@@ -162,13 +163,12 @@ lock_release(struct lock *lock)
 {
 	// Write this
 
-	kprintf("In lock_release\n");
-	if(!lock)kprintf("This lock ptr is pointing to null");
+	if(!lock)panic("This lock ptr is pointing to null");
 	
 	int spl = splhigh();
 
-	//no thread occupies this lock
-	lock -> threadWithLock = NULL;	
+	//make no thread occupy this lock
+        lock -> held = 0;
 	
 	//wakeup whatever that was waiting for this lock
 	thread_wakeup(lock);	
@@ -186,13 +186,8 @@ lock_do_i_hold(struct lock *lock)
 	// Write this
 	int numToReturn = 0;
 	//if current thread is the same as the lock thread
-	if (lock -> threadWithLock == curthread){
-		//already holding the lock
-		numToReturn = 1;
-	}else{
-		//not holding the lock
-		numToReturn = 0;
-	}
+        if(lock -> held == 1)numToReturn = 1;
+        else numToReturn = 0;
 
 	(void)lock;  // suppress warning until code gets written
 
@@ -243,32 +238,18 @@ cv_wait(struct cv *cv, struct lock *lock)
 	(void)lock;  // suppress warning until code gets written
 
 	// Write this
-
-	int spl = splhigh();
+        if(cv == NULL || lock == NULL)panic("Null parameters passed in!\n");
 	
 	// Release the supplied lock
 	if(lock_do_i_hold(lock))lock_release(lock);
-
-		
-	//add this to waiting list
-	struct cvWaitNode * waitingNode = kmalloc(sizeof(struct cvWaitNode));
-	if(waitingNode== NULL){
-		panic("Can't malloc waiting list\n");
-	}	
-
-	waitingNode -> sleepingThread = curthread;
-	waitingNode -> lock = lock;
-	waitingNode -> cv = cv;
-	waitingNode -> nextNode = NULL;
-	if(cv -> waitingList == NULL)cv -> waitingList = waitingNode;
-	else{
-		cv -> lastNode -> nextNode  = waitingNode;
-		cv -> lastNode = waitingNode;
-	}
+        
+        //go back to interrupt disable
+        int spl = splhigh();
+        
 	// go to sleep
 	thread_sleep(cv);
 
-	//reenable interrpupts
+	// reenable interrpupts
 	splx(spl);
 	
 	// after waking up: reaquire lock
@@ -304,7 +285,7 @@ cv_broadcast(struct cv *cv, struct lock *lock)
 	(void)lock;  // suppress warning until code gets written
 
 	//disable interrupt
-	int spl = splhigh();
+	int spl= splhigh();
 
 	//wakes up everything sleeping on cv
 	if(lock_do_i_hold(lock)==1)thread_wakeup(cv);

@@ -50,10 +50,9 @@ void              sem_destroy(struct semaphore *);
 
 struct lock {
 	char *name;
-	// add what you need here
-	//volatile int held = 0;
-	volatile struct thread * threadWithLock;
-	// (don't forget to mark things volatile as needed)
+	// add what you need here	
+	int numOccupiedBowls;	
+        int held;
 };
 
 struct lock *lock_create(const char *name);
