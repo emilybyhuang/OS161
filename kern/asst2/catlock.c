@@ -18,6 +18,10 @@
 #include <thread.h>
 #include "catmouse.h"
 
+//if the element == 0: cat occupying it
+//if element == 1: mouse occupying it
+int whosAtBowl[NFOODBOWLS];
+
 /*
  * 
  * Function Definitions
@@ -40,6 +44,13 @@
  *
  */
 
+//one lock per bowl
+struct lock * lock1;
+//=lock_create("lock1");
+lock1  =lock_create("lock1");
+struct lock * lock2;
+//=lock_create("lock2");
+
 static
 void
 catlock(void * unusedpointer, 
@@ -51,6 +62,30 @@ catlock(void * unusedpointer,
 
         (void) unusedpointer;
         (void) catnumber;
+
+	//need to have 4 meals
+	int i = 0;
+	while(i<NMEALS){	
+		//try to grab a lock
+		
+		
+
+		//check who's at the bowls
+		int j = 0;
+		while( j <NFOODBOWLS){
+			if(whosAtBowl[j] == 1){
+				//need to wait for the mouse to be done
+				//pass in cv, lock
+				//lock would be any lock cuz it needs all mice to be gone, cv would be 
+				
+			}	
+			j++;
+		}
+
+		i++;
+	}
+
+	
 }
 	
 

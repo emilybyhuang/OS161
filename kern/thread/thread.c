@@ -560,6 +560,20 @@ thread_wakeup(const void *addr)
 	}
 }
 
+//using thread_wakeup as a reference
+void thread_wakeup_one(struct cv * thisCV){
+
+	assert(curspl>0); //will display surspl if it's less than 0
+
+	//wake up the first one waiting
+	if(thisCV -> waitingList != NULL)thread_wakeup(thisCV -> waitingList ->cv);
+	
+}
+
+
+
+
+}
 /*
  * Return nonzero if there are any threads who are sleeping on "sleep address"
  * ADDR. This is meant to be used only for diagnostic purposes.

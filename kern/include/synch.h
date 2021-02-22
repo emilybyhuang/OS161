@@ -51,6 +51,8 @@ void              sem_destroy(struct semaphore *);
 struct lock {
 	char *name;
 	// add what you need here
+	//volatile int held = 0;
+	volatile struct thread * threadWithLock;
 	// (don't forget to mark things volatile as needed)
 };
 
@@ -87,10 +89,19 @@ void         lock_destroy(struct lock *);
  * internally.
  */
 
+struct cvWaitNode{
+	struct thread * sleepingThread;
+	struct lock * lock;
+	struct cv * cv;
+	struct cvWaitNode * nextNode;
+};
+
 struct cv {
 	char *name;
 	// add what you need here
 	// (don't forget to mark things volatile as needed)
+	volatile struct cvWaitNode * waitingList; 
+	volatile struct cvWaitNode * lastNode;
 };
 
 struct cv *cv_create(const char *name);

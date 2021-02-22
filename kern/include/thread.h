@@ -99,6 +99,9 @@ void thread_sleep(const void *addr);
  */
 void thread_wakeup(const void *addr);
 
+/*Cause one thread sleeping on the addr to wake up*/
+void thread_wakeup_one(struct cv * thisCV);
+
 /*
  * Return nonzero if there are any threads sleeping on the specified
  * address. Meant only for diagnostic purposes.

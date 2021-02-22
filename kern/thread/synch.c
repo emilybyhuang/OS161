@@ -115,7 +115,8 @@ lock_create(const char *name)
 	}
 	
 	// add stuff here as needed
-	
+	// initialize the lock
+	lock -> threadWithLock = NULL;
 	return lock;
 }
 
@@ -134,6 +135,24 @@ void
 lock_acquire(struct lock *lock)
 {
 	// Write this
+	// check the lock first
+
+	kprintf("In lock_acquire\n");
+	if(!lock)kprintf("This lock ptr is pointing to null");
+
+	int spl = splhigh();
+	
+	while(lock -> threadWithLock != NULL ){
+		//this is lock is taken by another thread
+		thread_sleep(lock);
+	}
+
+	//now this thread will take the lock
+	lock -> threadWithLock = curthread;
+	
+	//enable interrupts
+	//curspl = SPL_HIGH;
+	splx(spl);
 
 	(void)lock;  // suppress warning until code gets written
 }
@@ -143,17 +162,41 @@ lock_release(struct lock *lock)
 {
 	// Write this
 
+	kprintf("In lock_release\n");
+	if(!lock)kprintf("This lock ptr is pointing to null");
+	
+	int spl = splhigh();
+
+	//no thread occupies this lock
+	lock -> threadWithLock = NULL;	
+	
+	//wakeup whatever that was waiting for this lock
+	thread_wakeup(lock);	
+
+	//enable interrupts
+	splx(spl);
+
 	(void)lock;  // suppress warning until code gets written
 }
 
+//check if the lock passed in is holding the current thread
 int
 lock_do_i_hold(struct lock *lock)
 {
 	// Write this
+	int numToReturn = 0;
+	//if current thread is the same as the lock thread
+	if (lock -> threadWithLock == curthread){
+		//already holding the lock
+		numToReturn = 1;
+	}else{
+		//not holding the lock
+		numToReturn = 0;
+	}
 
 	(void)lock;  // suppress warning until code gets written
 
-	return 1;    // dummy until code gets written
+	return numToReturn;    // dummy until code gets written
 }
 
 ////////////////////////////////////////////////////////////
@@ -196,9 +239,41 @@ cv_destroy(struct cv *cv)
 void
 cv_wait(struct cv *cv, struct lock *lock)
 {
-	// Write this
 	(void)cv;    // suppress warning until code gets written
 	(void)lock;  // suppress warning until code gets written
+
+	// Write this
+
+	int spl = splhigh();
+	
+	// Release the supplied lock
+	if(lock_do_i_hold(lock))lock_release(lock);
+
+		
+	//add this to waiting list
+	struct cvWaitNode * waitingNode = kmalloc(sizeof(struct cvWaitNode));
+	if(waitingNode== NULL){
+		panic("Can't malloc waiting list\n");
+	}	
+
+	waitingNode -> sleepingThread = curthread;
+	waitingNode -> lock = lock;
+	waitingNode -> cv = cv;
+	waitingNode -> nextNode = NULL;
+	if(cv -> waitingList == NULL)cv -> waitingList = waitingNode;
+	else{
+		cv -> lastNode -> nextNode  = waitingNode;
+		cv -> lastNode = waitingNode;
+	}
+	// go to sleep
+	thread_sleep(cv);
+
+	//reenable interrpupts
+	splx(spl);
+	
+	// after waking up: reaquire lock
+	lock_acquire(lock);
+
 }
 
 void
@@ -207,6 +282,18 @@ cv_signal(struct cv *cv, struct lock *lock)
 	// Write this
 	(void)cv;    // suppress warning until code gets written
 	(void)lock;  // suppress warning until code gets written
+
+	//wake up one thread sleeping on this
+	
+	//disable interrupt
+	int spl = splhigh();
+
+	//wake up the first thread in the waiting list
+	//check if the current thread has the lock 
+	if(lock_do_i_hold(lock) == 1)thread_wakeup_one(cv);
+	
+	//enable interrupt
+	splx(spl);
 }
 
 void
@@ -215,4 +302,13 @@ cv_broadcast(struct cv *cv, struct lock *lock)
 	// Write this
 	(void)cv;    // suppress warning until code gets written
 	(void)lock;  // suppress warning until code gets written
+
+	//disable interrupt
+	int spl = splhigh();
+
+	//wakes up everything sleeping on cv
+	if(lock_do_i_hold(lock)==1)thread_wakeup(cv);
+	//enable interrupts again
+	splx(spl);
+
 }
