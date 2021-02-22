@@ -101,6 +101,7 @@ struct cv {
 	// (don't forget to mark things volatile as needed)
 	volatile struct cvWaitNode * waitingList; 
 	volatile struct cvWaitNode * lastNode;
+        int isWaiting;
 };
 
 struct cv *cv_create(const char *name);

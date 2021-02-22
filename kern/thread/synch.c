@@ -216,7 +216,7 @@ cv_create(const char *name)
 	}
 	
 	// add stuff here as needed
-	
+	cv -> isWaiting = 0;
 	return cv;
 }
 
@@ -246,6 +246,8 @@ cv_wait(struct cv *cv, struct lock *lock)
         //go back to interrupt disable
         int spl = splhigh();
         
+        cv -> isWaiting = 1;
+        
 	// go to sleep
 	thread_sleep(cv);
 
@@ -271,6 +273,7 @@ cv_signal(struct cv *cv, struct lock *lock)
 
 	//wake up the first thread in the waiting list
 	//check if the current thread has the lock 
+        cv -> isWaiting = 0;
 	if(lock_do_i_hold(lock) == 1)thread_wakeup_one(cv);
 	
 	//enable interrupt
@@ -288,6 +291,7 @@ cv_broadcast(struct cv *cv, struct lock *lock)
 	int spl= splhigh();
 
 	//wakes up everything sleeping on cv
+        cv -> isWaiting = 0;
 	if(lock_do_i_hold(lock)==1)thread_wakeup(cv);
 	//enable interrupts again
 	splx(spl);
