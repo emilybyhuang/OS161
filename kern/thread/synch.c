@@ -137,6 +137,7 @@ lock_acquire(struct lock *lock)
 {
 	// Write this
 	// check the lock first
+
 	if(lock == NULL)panic("This lock ptr is pointing to null");
 
 	int spl = splhigh();
@@ -150,7 +151,6 @@ lock_acquire(struct lock *lock)
 	//enable interrupts
 	splx(spl);
 
-	(void)lock;  // suppress warning until code gets written
 }
 
 void
@@ -161,27 +161,28 @@ lock_release(struct lock *lock)
 	if(!lock)panic("This lock ptr is pointing to null");
 	
 	int spl = splhigh();
+        
+        
+	//wakeup whatever that was waiting for this lock
+	thread_wakeup(lock);
 
 	//make no thread occupy this lock
         lock -> held = 0;
         lock -> heldThread = NULL;
-	
-	//wakeup whatever that was waiting for this lock
-	thread_wakeup(lock);	
+		
 
 	//enable interrupts
 	splx(spl);
 
-	(void)lock;  // suppress warning until code gets written
 }
 
 //check if the lock passed in is holding the current thread
 int
 lock_do_i_hold(struct lock *lock)
 {
-    (void)lock;  // suppress warning until code gets written
     // Write this
-    return (lock -> heldThread == curthread);
+    if(lock -> heldThread == curthread)return 1;
+    else return 0;
 }
 
 ////////////////////////////////////////////////////////////
@@ -224,18 +225,17 @@ cv_destroy(struct cv *cv)
 void
 cv_wait(struct cv *cv, struct lock *lock)
 {
-	(void)cv;    // suppress warning until code gets written
-	(void)lock;  // suppress warning until code gets written
 
 	// Write this
         if(cv == NULL || lock == NULL)panic("Null parameters passed in!\n");
 	
-	// Release the supplied lock
-	lock_release(lock);
-        
         //go back to interrupt disable
         int spl = splhigh();
         
+	// Release the supplied lock
+	lock_release(lock);
+        
+
         cv -> isWaiting = 1;
         
 	// go to sleep
@@ -253,8 +253,7 @@ void
 cv_signal(struct cv *cv, struct lock *lock)
 {
 	// Write this
-	(void)cv;    // suppress warning until code gets written
-	(void)lock;  // suppress warning until code gets written
+        (void)lock;
 
 	//wake up one thread sleeping on this
 	
@@ -264,7 +263,7 @@ cv_signal(struct cv *cv, struct lock *lock)
 	//wake up the first thread in the waiting list
 	//check if the current thread has the lock 
         cv -> isWaiting = 0;
-	if(lock -> heldThread != NULL)thread_wakeup_one(cv);
+	thread_wakeup_one(cv);
 	
 	//enable interrupt
 	splx(spl);
@@ -274,7 +273,6 @@ void
 cv_broadcast(struct cv *cv, struct lock *lock)
 {
 	// Write this
-	(void)cv;    // suppress warning until code gets written
 	(void)lock;  // suppress warning until code gets written
 
 	//disable interrupt
@@ -282,7 +280,7 @@ cv_broadcast(struct cv *cv, struct lock *lock)
 
 	//wakes up everything sleeping on cv
         cv -> isWaiting = 0;
-	if(lock->heldThread != NULL)thread_wakeup(cv);
+	thread_wakeup(cv);
 	//enable interrupts again
 	splx(spl);
 
