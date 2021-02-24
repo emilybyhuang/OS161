@@ -16,6 +16,13 @@
 #include <lib.h>
 #include <test.h>
 #include <thread.h>
+#include <synch.h>
+
+//locks:
+struct lock * NW = NULL;
+struct lock * NE = NULL;
+struct lock * SW = NULL;
+struct lock * SE = NULL;
 
 
 /*
@@ -80,6 +87,87 @@ gostraight(unsigned long cardirection,
         
         (void) cardirection;
         (void) carnumber;
+        
+        //directions[] is char
+        //passing in the index
+        
+        
+        switch(cardirection){
+            //N
+            case 0:
+                
+                lock_acquire(NW);
+                lock_acquire(SW);
+                //approching...
+                
+                //n s
+                message(APPROACHING, carnumber, 0, 2);
+                message(REGION1,  carnumber, 0, 2);
+                message(REGION2,  carnumber, 0, 2);
+                message(LEAVING,  carnumber, 0, 2);            
+                lock_release(NW);
+                lock_release(SW);
+                
+                break;
+                
+                
+            //E
+            case 1:
+                lock_acquire(NE);
+                lock_acquire(NW);
+                // e w
+                message(APPROACHING, carnumber, 1, 3);
+                message(REGION1,  carnumber, 1, 3);
+                message(REGION2,  carnumber, 1, 3);
+                message(LEAVING,  carnumber, 1, 3);
+                lock_release(NE);
+                lock_release(NW);
+                
+                
+                
+                
+                
+                
+                
+                break;
+                
+                
+            //S
+            case 2:
+
+                
+                lock_acquire(SE);
+                lock_acquire(NE);
+                //s w
+                message(APPROACHING, carnumber, 2, 0);
+                message(REGION1,  carnumber, 2, 0);
+                message(REGION2,  carnumber, 2, 0);
+                message(LEAVING,  carnumber, 2, 0);
+                lock_release(SE);
+                lock_release(NE);
+                
+                break;
+                
+                
+            //W
+            case 3:
+                lock_acquire(SW);
+                lock_acquire(SE);
+                       
+                //w e
+                message(APPROACHING, carnumber, 3, 1);
+                message(REGION1,  carnumber, 3, 1);
+                message(REGION2,  carnumber, 3, 1);
+                message(LEAVING,  carnumber, 3, 1);
+                lock_release(SW);
+                lock_release(SE);
+                
+                break;
+            default:
+                kprintf("ERROR: Unknown car direction\n");
+                      
+        }
+        
 }
 
 
@@ -111,6 +199,86 @@ turnleft(unsigned long cardirection,
 
         (void) cardirection;
         (void) carnumber;
+        
+        
+        switch(cardirection){
+            //N
+            case 0:
+                
+                
+                
+//                lock_acquire(NW);
+//                lock_acquire(SW);
+//                lock_acquire(SE);
+//                //w e
+//                message(APPROACHING, carnumber, 0, 1);
+//                message(REGION1,  carnumber, 0, 1);
+//                message(REGION2,  carnumber, 0, 1);
+//                message(REGION3,  carnumber, 0, 1);
+//                message(LEAVING,  carnumber, 0, 1);
+//                lock_release(NW);
+//                lock_release(SW);
+//                lock_release(SE);
+                
+                
+                
+                break;
+                
+            //E
+            case 1:
+                   
+//                lock_acquire(NE);
+//                lock_acquire(NW);
+//                lock_acquire(SW);
+//                //w e
+//                message(APPROACHING, carnumber, 1, 2);
+//                message(REGION1,  carnumber, 1, 2);
+//                message(REGION2,  carnumber, 1, 2);
+//                message(REGION3,  carnumber, 1, 2);
+//                message(LEAVING,  carnumber, 1, 2);
+//                lock_release(NE);
+//                lock_release(NW);
+//                lock_release(SW);
+                
+                
+                
+                break;
+            //S
+            case 2:
+//                lock_acquire(SE);
+//                lock_acquire(NE);
+//                lock_acquire(NW);
+//                //w e
+//                message(APPROACHING, carnumber, 1, 2);
+//                message(REGION1,  carnumber, 1, 2);
+//                message(REGION2,  carnumber, 1, 2);
+//                message(REGION3,  carnumber, 1, 2);
+//                message(LEAVING,  carnumber, 1, 2);
+//                lock_release(SE);
+//                lock_release(NE);
+//                lock_release(NW);
+                break;
+            //W
+            case 3:
+//                lock_acquire(SW);
+//                lock_acquire(SE);
+//                lock_acquire(NE);
+//                //w e
+//                message(APPROACHING, carnumber, 3, 0);
+//                message(REGION1,  carnumber, 3, 0);
+//                message(REGION2,  carnumber, 3, 0);
+//                message(REGION3,  carnumber, 3, 0);
+//                message(LEAVING,  carnumber, 3, 0);
+//                lock_release(SW);
+//                lock_release(SE);
+//                lock_release(NE);
+//                
+                
+                break;
+            default:
+                kprintf("ERROR: Unknown car direction\n");
+                      
+        }
 }
 
 
@@ -142,6 +310,61 @@ turnright(unsigned long cardirection,
 
         (void) cardirection;
         (void) carnumber;
+        
+        switch(cardirection){
+            //N
+            case 0:
+                
+                lock_acquire(NW);
+                //n w
+                message(APPROACHING, carnumber, 0, 3);
+                message(REGION1,  carnumber, 0, 3);
+                message(LEAVING,  carnumber, 0, 3);
+                
+                
+                lock_release(NW);
+                
+                break;
+                
+            //E
+            case 1:
+                lock_acquire(NE);
+                // e n
+                message(APPROACHING, carnumber, 1, 0);
+                message(REGION1,  carnumber, 1, 0);
+                message(LEAVING,  carnumber, 1, 0);
+                
+                
+                lock_release(NE);
+                break;
+            //S
+            case 2:
+                lock_acquire(SE);
+                
+                message(APPROACHING, carnumber, 2, 1);
+                message(REGION1,  carnumber, 2, 1);
+                message(LEAVING,  carnumber, 2, 1);
+                
+                lock_release(SE);
+                
+                break;
+            //W
+            case 3:
+                lock_acquire(SW);
+                
+                message(APPROACHING, carnumber, 3, 2);
+                message(REGION1,  carnumber, 3, 2);
+                message(LEAVING,  carnumber, 3, 2);
+                
+                lock_release(SW);
+                
+                
+                break;
+            default:
+                kprintf("ERROR: Unknown car direction\n");
+                      
+        }
+        
 }
 
 
@@ -187,6 +410,25 @@ approachintersection(void * unusedpointer,
          */
 
         cardirection = random() % 4;
+        int carTurnOrStraight = random() %3;
+        switch(carTurnOrStraight){
+            case 0:
+                gostraight(cardirection, carnumber);
+                break;
+                
+            case 1:
+                turnright(cardirection, carnumber);
+                break;
+            case 2:
+                turnleft(cardirection, carnumber
+                        
+                      );
+                break;
+            default:
+                kprintf("Error in approaching interstion\n");
+                      
+                
+        }
 }
 
 
@@ -215,6 +457,12 @@ createcars(int nargs,
          * Start NCARS approachintersection() threads.
          */
 
+        if(NW == NULL)NW=lock_create("NW lock");
+        if(NE == NULL)NE=lock_create("NE lock");
+        if(SW == NULL)SW=lock_create("SW lock");
+        if(SE == NULL)SE=lock_create("SE lock");
+        
+        
         for (index = 0; index < NCARS; index++) {
                 error = thread_fork("approachintersection thread",
                                     NULL, index, approachintersection, NULL);

@@ -65,8 +65,7 @@ int catWaitingForLock[6] = {-1};
 static
 void
 catlock(void * unusedpointer, 
-        unsigned long catnumber)
-{
+        unsigned long catnumber){
         /*
          * Avoid unused variable warnings.
          */
@@ -120,6 +119,7 @@ catlock(void * unusedpointer,
             whosAtBowl[bowlAteAt] = -1;
             
             if(whosAtBowl[0] == -1 && whosAtBowl[1] == -1){
+                kprintf("broad cast mouse\n");
                 cv_broadcast(mouseWaiting, overallLock); //switch to the other animal waiting
             }else{
                 //at least one available
@@ -206,6 +206,7 @@ mouselock(void * unusedpointer,
                         
             //now can wake up any mouse waiting for this bowl
             if(whosAtBowl[0] == -1 && whosAtBowl[1] == -1){
+                kprintf("broad cast cat\n");
                 cv_broadcast(catWaiting, overallLock); //switch to the other animal waiting
             }else{
                 cv_signal(mouseWaiting, overallLock);
