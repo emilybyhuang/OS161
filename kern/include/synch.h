@@ -52,6 +52,7 @@ struct lock {
 	char *name;
 	// add what you need here	
 	int numOccupiedBowls;	
+        volatile struct thread * heldThread;
         int held;
 };
 

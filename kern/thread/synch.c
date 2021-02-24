@@ -117,6 +117,7 @@ lock_create(const char *name)
 	// add stuff here as needed
 	// initialize the lock
 	//lock -> numOccupiedBowls = 0;
+        lock -> heldThread = NULL;
         lock -> held = 0;//nothing is taking this lock yet
 	return lock;
 }
@@ -127,7 +128,6 @@ lock_destroy(struct lock *lock)
 	assert(lock != NULL);
 
 	// add stuff here as needed
-	
 	kfree(lock->name);
 	kfree(lock);
 }
@@ -141,16 +141,11 @@ lock_acquire(struct lock *lock)
 
 	int spl = splhigh();
         
-        int lockInitialState = lock -> held;
-        //try to get lock
-        if(lockInitialState == 0){
-            lock -> held = 1;
-        }else if(lockInitialState == 1){
-            while(lock -> held  == 1){
-                thread_sleep(lock);//sleep on this lock 
-            }
-            lock -> held = 1;//woke up and get lock now
+        while(lock -> held  == 1){
+            thread_sleep(lock);//sleep on this lock 
         }
+        lock -> held = 1;//woke up and get lock now    
+        lock -> heldThread =curthread;
         
 	//enable interrupts
 	splx(spl);
@@ -169,6 +164,7 @@ lock_release(struct lock *lock)
 
 	//make no thread occupy this lock
         lock -> held = 0;
+        lock -> heldThread = NULL;
 	
 	//wakeup whatever that was waiting for this lock
 	thread_wakeup(lock);	
@@ -183,15 +179,9 @@ lock_release(struct lock *lock)
 int
 lock_do_i_hold(struct lock *lock)
 {
-	// Write this
-	int numToReturn = 0;
-	//if current thread is the same as the lock thread
-        if(lock -> held == 1)numToReturn = 1;
-        else numToReturn = 0;
-
-	(void)lock;  // suppress warning until code gets written
-
-	return numToReturn;    // dummy until code gets written
+    (void)lock;  // suppress warning until code gets written
+    // Write this
+    return (lock -> heldThread == curthread);
 }
 
 ////////////////////////////////////////////////////////////
@@ -241,7 +231,7 @@ cv_wait(struct cv *cv, struct lock *lock)
         if(cv == NULL || lock == NULL)panic("Null parameters passed in!\n");
 	
 	// Release the supplied lock
-	if(lock_do_i_hold(lock))lock_release(lock);
+	lock_release(lock);
         
         //go back to interrupt disable
         int spl = splhigh();
@@ -274,7 +264,7 @@ cv_signal(struct cv *cv, struct lock *lock)
 	//wake up the first thread in the waiting list
 	//check if the current thread has the lock 
         cv -> isWaiting = 0;
-	if(lock_do_i_hold(lock) == 1)thread_wakeup_one(cv);
+	if(lock -> heldThread != NULL)thread_wakeup_one(cv);
 	
 	//enable interrupt
 	splx(spl);
@@ -292,7 +282,7 @@ cv_broadcast(struct cv *cv, struct lock *lock)
 
 	//wakes up everything sleeping on cv
         cv -> isWaiting = 0;
-	if(lock_do_i_hold(lock)==1)thread_wakeup(cv);
+	if(lock->heldThread != NULL)thread_wakeup(cv);
 	//enable interrupts again
 	splx(spl);
 
