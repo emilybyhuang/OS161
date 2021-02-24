@@ -1,9 +1,3 @@
-//Key points: 
-//    1.there will be one general lock that takes care of the bowls: so that you 
-//    only modify the bowl status
-//        
-//
-
 /*
  * catlock.c
  *
@@ -53,9 +47,20 @@ int whosAtBowl[NFOODBOWLS] = {-1,-1};
 
 
 struct lock * overallLock = NULL;
-struct cv * waitingForDish = NULL;
+struct cv * catWaiting = NULL;
+struct cv * mouseWaiting = NULL;
+
+//struct cv * mouseWaiting;
+//struct cv * catWaiting;
+/*
+void makeOverallLock(char * name){
+	overallLock = lock_create(name);
+	overallLock -> numOccupiedBowls = 0;
+}
+*/
 
 
+int catWaitingForLock[6] = {-1};
 
 static
 void
@@ -68,65 +73,64 @@ catlock(void * unusedpointer,
 
         (void) unusedpointer;
         (void) catnumber;
-        
-
 	
-
-        int i = 0;
+        
+	//need to have 4 meals
+	int i = 0;
 	while(i<NMEALS){	
             
-            //try to grab a lock            
-            kprintf("cat trying...\n");
+            //try to grab a lock
+            //kprintf("1");
+           
+            int bowlAteAt = -1;
+            
             //try to get a bowl
+            
             lock_acquire(overallLock);
-            //no mouse eating
-            while((whosAtBowl[0] == 1 || whosAtBowl[1] == 1) || (whosAtBowl[0] != -1 && whosAtBowl[1] != -1)){
-                cv_wait(waitingForDish,overallLock);
-            }
-            
-            kprintf("cat!\n");
-               
-            //now sure the cat can eat!
-            
-            //take whatever bowl is available
-            if(whosAtBowl[0] == -1){
-                
-                //take this bowl for the cat
-                whosAtBowl[0] = 0;
-                lock_release(overallLock);
-                
-                //other animals can now check the bowl status, 
-                //say to take the other bowl if available but they just can't come into the eating bowl
-                catmouse_eat("cat", catnumber,1, i);
-                
-                //done eating so reset status to avail
-                lock_acquire(overallLock);
-                whosAtBowl[0] = -1;
-                if(waitingForDish -> isWaiting)cv_broadcast(waitingForDish, overallLock);
-                lock_release(overallLock);
-
-            }else if(whosAtBowl[1] == -1){
-                
-                //take this bowl for the cat
-                whosAtBowl[1] = 0;
-                lock_release(overallLock);
-                
-                //other animals can now check the bowl status, 
-                //say to take the other bowl if available but they just can't come into the eating bowl
-                catmouse_eat("cat", catnumber,2, i);
-                
-                //done eating so reset status to avail
-                lock_acquire(overallLock);
-                whosAtBowl[1] = -1;
-                if(waitingForDish -> isWaiting)cv_broadcast(waitingForDish, overallLock);
-                lock_release(overallLock);
+            //no cats eating
+            if(whosAtBowl[0] != 1 && whosAtBowl[1] != 1){
+                if(whosAtBowl[0] == -1){
+                    //take this bowl for the mouse
+                    whosAtBowl[0] = 0;
+                    bowlAteAt = 0;
+                    
+                }else if(whosAtBowl[1] == -1){
+                    //take this bowl for the mouse
+                    whosAtBowl[1] = 0;
+                    bowlAteAt = 1;
+                    
+                }else{
+                    //both are taken by mouse
+                    //catWaiting = cv_create("Cat waiting for lock");
+                    
+                    cv_wait(catWaiting,overallLock);
+                   
+                }
             }else{
-                cv_wait(waitingForDish,overallLock);//weird case: wait for another valid bowl to be available
+                //all cats eating
+                //catWaiting = cv_create("Cat waiting for lock");
+                cv_wait(catWaiting,overallLock);
             }
-
+            
+            
+            //now assume the cat ate
+            
+            catmouse_eat("cat", catnumber,bowlAteAt+1, i);
+            
+            //make bowl available
+            whosAtBowl[bowlAteAt] = -1;
+            
+            if(whosAtBowl[0] == -1 && whosAtBowl[1] == -1){
+                cv_broadcast(catWaiting, overallLock);
+            }else{
+                //at least one available
+                cv_signal(catWaiting, overallLock);
+            }
+            
+            lock_release(overallLock);
             i++;
 	}
-        
+        cv_destroy(catWaiting);	
 }
 	
 
@@ -158,59 +162,60 @@ mouselock(void * unusedpointer,
         (void) unusedpointer;
         (void) mousenumber;
         
-      
+        
+       
         
 	//need to have 4 meals
 	int i = 0;
 	while(i<NMEALS){	
-            kprintf("mouse trying...\n");
-
+            //try to grab a lock
+            
+            int bowlAteAt = -1;
+            
             //try to get a bowl
             lock_acquire(overallLock);
-            
-            //or or more cats or full
-            while( (whosAtBowl[0] == 0 || whosAtBowl[1] == 0) || (whosAtBowl[0] != -1 && whosAtBowl[1] != -1)){
-                cv_wait(waitingForDish,overallLock);
-            }
-            
-
-
-            kprintf("mouse!\n");
-            
-            if(whosAtBowl[0] == -1){
-                //take this bowl for the mouse
-                whosAtBowl[0] = 1;
-                //now assume the mouse ate
-                lock_release(overallLock);
-                catmouse_eat("mouse", mousenumber,1, i);
-                
-                //now doing eating: the bowl status will change
-                lock_acquire(overallLock);
-
-                whosAtBowl[0] = -1;
-
-                if(waitingForDish -> isWaiting)cv_broadcast(waitingForDish, overallLock);
-                lock_release(overallLock);
-                
-            }else if(whosAtBowl[1] == -1){
-
-                //take this bowl for the mouse
-                whosAtBowl[1] = 1;
-                //now assume the mouse ate
-                lock_release(overallLock);
-                catmouse_eat("mouse", mousenumber,2, i);
-                
-                lock_acquire(overallLock);
-                
-                whosAtBowl[1] = -1;
-                if(waitingForDish -> isWaiting)cv_broadcast(waitingForDish, overallLock);
-                lock_release(overallLock);
-                
+            //no cats eating
+            if(whosAtBowl[0] != 0 && whosAtBowl[1] != 0){
+                if(whosAtBowl[0] == -1){
+                    //take this bowl for the mouse
+                    whosAtBowl[0] = 1;
+                    bowlAteAt = 0;
+//                    cv_destroy(mouseWaiting);
+                }else if(whosAtBowl[1] == -1){
+                    //take this bowl for the mouse
+                    whosAtBowl[1] = 1;
+                    bowlAteAt = 1;
+                    
+                }else{
+                    //both are taken by mouse
+//                mouseWaiting = cv_create("Mouse waiting for lock");
+                    cv_wait(mouseWaiting,overallLock);
+                }
             }else{
-                cv_wait(waitingForDish,overallLock);//wait for valid bowl
+//                mouseWaiting = cv_create("Mouse waiting for lock");
+                cv_wait(mouseWaiting,overallLock);
             }
+            
+            
+            //now assume the mouse ate
+            catmouse_eat("mouse", mousenumber,bowlAteAt+1, i);
+            
+            
+            //make bowl available
+            whosAtBowl[bowlAteAt] = -1;
+            
+            //now can wake up any mouse waiting for this bowl
+            if(whosAtBowl[0] == -1 && whosAtBowl[1] == -1){
+                cv_broadcast(mouseWaiting, overallLock);
+            }else{
+                cv_signal(mouseWaiting, overallLock);
+            }
+            
+            
+            lock_release(overallLock);
             i++;
 	}
+        cv_destroy(mouseWaiting);
 }
 
 
@@ -237,15 +242,12 @@ catmouselock(int nargs,
         kprintf("IN CATMOUSE LOCK\n");
         /*
          * Start NCATS catlock() threads.
-         * 
          */
+        if(catWaiting == NULL)catWaiting= cv_create("cat waiting for bowl");
+        if(mouseWaiting == NULL)mouseWaiting= cv_create("Mouse waiting for bowl");
         if(overallLock == NULL)overallLock = lock_create("Lock");
-        
-        if(waitingForDish == NULL) waitingForDish = cv_create("Waiting for bowl");
+	
 
-
-        
-        
         for (index = 0; index < NCATS; index++) {
            
                 error = thread_fork("catlock thread", 
@@ -301,17 +303,13 @@ catmouselock(int nargs,
 
         (void)nargs;
         (void)args;
-        kprintf("catlock test done\n");
-        
-        
-        //delete all the pointers
-
+        cv_destroy(catWaiting);
+        cv_destroy(mouseWaiting);
         lock_destroy(overallLock);
-        cv_destroy(waitingForDish);
+        catWaiting = NULL;
+        mouseWaiting = NULL;
         overallLock = NULL;
-        waitingForDish = NULL;
-
-
+        kprintf("catlock test done\n");
 
         return 0;
 }
