@@ -108,7 +108,7 @@ gostraight(unsigned long cardirection,
         
         //directions[] is char
         //passing in the index
-        currentLockState(carnumber);
+        //currentLockState(carnumber);
         
         switch(cardirection){
             
@@ -248,7 +248,7 @@ gostraight(unsigned long cardirection,
                 kprintf("ERROR: Unknown car direction\n");
                       
         }
-        currentLockState(carnumber);
+        //currentLockState(carnumber);
         kprintf("Exit switch\n");
         
 }
@@ -299,8 +299,9 @@ turnleft(unsigned long cardirection,
                 lock_acquire(NW);
                 
                 message(REGION1,  carnumber, 0, 1);
-                
+                lock_release(NtoS);
                 lock_acquire(WtoE);
+                
                 while(NtoS->held == 1 && StoN->held == 1 && EtoW->held==1){
                     //wait to boss the entire NtoS portion hahaha
                     cv_wait(waitWtoE, WtoE);
@@ -311,7 +312,7 @@ turnleft(unsigned long cardirection,
                 message(REGION2,  carnumber, 0, 1);
                
                 lock_release(NW);
-                lock_release(NtoS);
+//                lock_release(NtoS);
                 message(REGION3,  carnumber, 0, 1);
                 message(LEAVING,  carnumber, 0, 1);
                 lock_release(SW);
@@ -358,16 +359,18 @@ turnleft(unsigned long cardirection,
                 lock_acquire(SW);
                 lock_release(NW);
                 message(REGION1,  carnumber, 1, 2);
+                lock_release(EtoW);
                 lock_acquire(NtoS);
                 while(WtoE->held == 1 && EtoW->held == 1 &&StoN->held==1){
                     //wait to boss the entire NtoS portion hahaha
                     cv_wait(waitNtoS, NtoS);
                 }
                 
+                
                 message(REGION2,  carnumber, 1, 2);
                 
                 lock_release(NE);
-                lock_release(EtoW);
+//                lock_release(EtoW);
                 message(REGION3,  carnumber, 1, 2);
                 message(LEAVING,  carnumber, 1, 2);
                 lock_release(NW);
@@ -410,14 +413,16 @@ turnleft(unsigned long cardirection,
                 lock_acquire(SE);
                 lock_acquire(NW);
                 message(REGION1,  carnumber, 1, 2);
+                lock_release(EtoW);
                 lock_acquire(EtoW);
                 while(NtoS->held == 1 && StoN->held == 1&&WtoE->held){
                     //wait to boss the entire NtoS portion hahaha
                     cv_wait(waitEtoW, EtoW);
                 }
+                
                 message(REGION2,  carnumber, 1, 2);
                 lock_release(SE);
-                lock_release(EtoW);
+//                lock_release(EtoW);
 
                 message(REGION3,  carnumber, 1, 2);
 //                lock_acquire(SE);
@@ -438,7 +443,7 @@ turnleft(unsigned long cardirection,
 //                
 //                message(REGION3,  carnumber, 1, 2);
 //                
-//                message(LEAVING,  carnumber, 1, 2);
+                message(LEAVING,  carnumber, 1, 2);
                 lock_release(NE);
 
                 
@@ -458,15 +463,17 @@ turnleft(unsigned long cardirection,
                 lock_acquire(SE);
                 lock_acquire(SW);
                 message(REGION1,  carnumber, 3, 0);
+                lock_release(WtoE);
                 lock_acquire(StoN);
                 
                 while(WtoE->held == 1 && EtoW->held == 1 &&NtoS->held==1){
                     //wait to boss the entire NtoS portion hahaha
                     cv_wait(waitStoN, StoN);
                 }
+                
                 message(REGION2,  carnumber, 3, 0);
                 lock_release(SW);
-                lock_release(WtoE);
+//                lock_release(WtoE);
 //                lock_acquire(SW);
 //                lock_acquire(WtoE);
 //                
@@ -482,10 +489,7 @@ turnleft(unsigned long cardirection,
 //                lock_release(WtoE);
 //
 //                
-//                message(REGION3,  carnumber, 3, 0);
-//                
-//                
-                
+                message(REGION3,  carnumber, 3, 0);
                 message(LEAVING,  carnumber, 3, 0);
                 lock_release(SE);
                 
@@ -496,6 +500,8 @@ turnleft(unsigned long cardirection,
                 kprintf("ERROR: Unknown car direction\n");
                       
         }
+        //currentLockState(carnumber);
+        kprintf("Exit switch\n");
 }
 
 
@@ -638,15 +644,17 @@ approachintersection(void * unusedpointer,
             case 0:
                 //turnright(cardirection, carnumber);
                 gostraight(cardirection, carnumber);
+                //turnleft(cardirection, carnumber);
                 break;
                 
             case 1:
-                turnright(cardirection, carnumber);
+                //turnright(cardirection, carnumber);
                 //gostraight(cardirection, carnumber);
+                turnleft(cardirection, carnumber);
                 break;
             case 2:
-                //turnright(cardirection, carnumber);
-                gostraight(cardirection, carnumber);
+                turnright(cardirection, carnumber);
+                //gostraight(cardirection, carnumber);
                 //turnleft(cardirection, carnumber);
                 break;
             default:
