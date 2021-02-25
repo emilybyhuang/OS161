@@ -157,15 +157,14 @@ gostraight(unsigned long cardirection,
                     //wait to boss the entire NtoS portion hahaha
                     cv_wait(waitEtoW, EtoW);
                 }
-                lock_acquire(NW);
                 lock_acquire(NE);
+                lock_acquire(NW);
+//                lock_acquire(NE);
                 
                 //lock_acquire(goStraight);
                 
                 message(REGION1,  carnumber, 1, 3);
-                
-                
-                
+
                 
                 message(REGION2,  carnumber, 1, 3);
                 lock_release(NE);
@@ -187,6 +186,7 @@ gostraight(unsigned long cardirection,
 
                 message(APPROACHING, carnumber, 2, 0);
                 lock_acquire(StoN);
+                
                 while(WtoE->held == 1 && EtoW->held == 1 &&NtoS->held==1){
                     //wait to boss the entire NtoS portion hahaha
                     cv_wait(waitStoN, StoN);
@@ -218,8 +218,9 @@ gostraight(unsigned long cardirection,
             //W
             case 3:
                 message(APPROACHING, carnumber, 3, 1);
+                
                 lock_acquire(WtoE);
-                while(NtoS->held == 1 && StoN->held == 1&&EtoW->held==1){
+                while(NtoS->held == 1 && StoN->held == 1 && EtoW->held==1){
                     //wait to boss the entire NtoS portion hahaha
                     cv_wait(waitWtoE, WtoE);
                 }
@@ -286,33 +287,60 @@ turnleft(unsigned long cardirection,
         switch(cardirection){
             //N
             case 0:
-                
-                
                 message(APPROACHING, carnumber, 0, 1);
-                lock_acquire(NW);
-                lock_acquire(NtoS);
                 
-                //w e
+                lock_acquire(NtoS);
+                while(WtoE->held == 1 && EtoW->held == 1 &&StoN->held==1){
+                    //wait to boss the entire NtoS portion hahaha
+                    cv_wait(waitNtoS, NtoS);
+                }
+                lock_acquire(SE);
+                lock_acquire(SW);
+                lock_acquire(NW);
                 
                 message(REGION1,  carnumber, 0, 1);
-                lock_acquire(SW);
+                
+                lock_acquire(WtoE);
+                while(NtoS->held == 1 && StoN->held == 1 && EtoW->held==1){
+                    //wait to boss the entire NtoS portion hahaha
+                    cv_wait(waitWtoE, WtoE);
+                }
+                
+                
                 
                 message(REGION2,  carnumber, 0, 1);
+               
                 lock_release(NW);
-                
-                
-                lock_acquire(SE);
-                lock_acquire(WtoE);
                 lock_release(NtoS);
-                
                 message(REGION3,  carnumber, 0, 1);
-                
                 message(LEAVING,  carnumber, 0, 1);
                 lock_release(SW);
-
-                
                 lock_release(SE);
                 lock_release(WtoE);
+                
+//                lock_acquire(NW);
+//                
+//
+//                
+//                message(REGION1,  carnumber, 0, 1);
+//                lock_acquire(SW);
+//                
+//                message(REGION2,  carnumber, 0, 1);
+//                lock_release(NW);
+//                
+//                
+//                lock_acquire(SE);
+//                lock_acquire(WtoE);
+//                lock_release(NtoS);
+//                
+//                message(REGION3,  carnumber, 0, 1);
+//                
+//                message(LEAVING,  carnumber, 0, 1);
+//                lock_release(SW);
+//
+//                
+//                lock_release(SE);
+//                lock_release(WtoE);
                 
                 
                 
@@ -321,55 +349,96 @@ turnleft(unsigned long cardirection,
             //E
             case 1:
                 message(APPROACHING, carnumber, 1, 2);
-   
-                lock_acquire(NE);
-                
                 lock_acquire(EtoW);
-//                //w e
+                while(NtoS->held == 1 && StoN->held == 1&&WtoE->held){
+                    //wait to boss the entire NtoS portion hahaha
+                    cv_wait(waitEtoW, EtoW);
+                }
+                lock_acquire(NE);
+                lock_acquire(SW);
+                lock_release(NW);
                 message(REGION1,  carnumber, 1, 2);
-                lock_acquire(NW);
-                
-                
+                lock_acquire(NtoS);
+                while(WtoE->held == 1 && EtoW->held == 1 &&StoN->held==1){
+                    //wait to boss the entire NtoS portion hahaha
+                    cv_wait(waitNtoS, NtoS);
+                }
                 
                 message(REGION2,  carnumber, 1, 2);
+                
                 lock_release(NE);
-                
-                lock_acquire(SW);
-                lock_acquire(NtoS);
                 lock_release(EtoW);
-                
                 message(REGION3,  carnumber, 1, 2);
                 message(LEAVING,  carnumber, 1, 2);
-                
                 lock_release(NW);
-
                 lock_release(SW);
+//                lock_acquire(NE);
+//                
+//                lock_acquire(EtoW);
+////                //w e
+//                message(REGION1,  carnumber, 1, 2);
+//                lock_acquire(NW);
+//                
+//                
+//                
+//                message(REGION2,  carnumber, 1, 2);
+//                lock_release(NE);
+//                
+//                lock_acquire(SW);
+//                lock_acquire(NtoS);
+//                lock_release(EtoW);
+//                
+//                message(REGION3,  carnumber, 1, 2);
+//                message(LEAVING,  carnumber, 1, 2);
+//                
+//                lock_release(NW);
+//
+//                lock_release(SW);
                 lock_release(NtoS);
                             
                 break;
             //S
             case 2:
                 message(APPROACHING, carnumber, 1, 2);
-
-                lock_acquire(SE);
                 lock_acquire(StoN);
                 
-                //w e
-                message(REGION1,  carnumber, 1, 2);
+                while(WtoE->held == 1 && EtoW->held == 1 &&NtoS->held==1){
+                    //wait to boss the entire NtoS portion hahaha
+                    cv_wait(waitStoN, StoN);
+                }
                 lock_acquire(NE);
-                
-                
-                message(REGION2,  carnumber, 1, 2);
-                
-                lock_release(SE);
+                lock_acquire(SE);
                 lock_acquire(NW);
+                message(REGION1,  carnumber, 1, 2);
                 lock_acquire(EtoW);
+                while(NtoS->held == 1 && StoN->held == 1&&WtoE->held){
+                    //wait to boss the entire NtoS portion hahaha
+                    cv_wait(waitEtoW, EtoW);
+                }
+                message(REGION2,  carnumber, 1, 2);
+                lock_release(SE);
+                lock_release(EtoW);
 
-                lock_release(StoN);
-                
                 message(REGION3,  carnumber, 1, 2);
-                
-                message(LEAVING,  carnumber, 1, 2);
+//                lock_acquire(SE);
+//                lock_acquire(StoN);
+//                
+//                //w e
+//                message(REGION1,  carnumber, 1, 2);
+//                lock_acquire(NE);
+//                
+//                
+//                message(REGION2,  carnumber, 1, 2);
+//                
+//                lock_release(SE);
+//                lock_acquire(NW);
+//                lock_acquire(EtoW);
+//
+//                lock_release(StoN);
+//                
+//                message(REGION3,  carnumber, 1, 2);
+//                
+//                message(LEAVING,  carnumber, 1, 2);
                 lock_release(NE);
 
                 
@@ -378,26 +447,44 @@ turnleft(unsigned long cardirection,
                 break;
             //W
             case 3:
-                                message(APPROACHING, carnumber, 3, 0);
-
-                lock_acquire(SW);
+                message(APPROACHING, carnumber, 3, 0);
                 lock_acquire(WtoE);
+                while(NtoS->held == 1 && StoN->held == 1 && EtoW->held==1){
+                    //wait to boss the entire NtoS portion hahaha
+                    cv_wait(waitWtoE, WtoE);
+                }
                 
-                //w e
-                message(REGION1,  carnumber, 3, 0);
+                lock_acquire(NE);
                 lock_acquire(SE);
+                lock_acquire(SW);
+                message(REGION1,  carnumber, 3, 0);
+                lock_acquire(StoN);
                 
+                while(WtoE->held == 1 && EtoW->held == 1 &&NtoS->held==1){
+                    //wait to boss the entire NtoS portion hahaha
+                    cv_wait(waitStoN, StoN);
+                }
                 message(REGION2,  carnumber, 3, 0);
                 lock_release(SW);
-                lock_acquire(NE);
-                lock_acquire(StoN);
-
                 lock_release(WtoE);
-
-                
-                message(REGION3,  carnumber, 3, 0);
-                
-                
+//                lock_acquire(SW);
+//                lock_acquire(WtoE);
+//                
+//                //w e
+//                message(REGION1,  carnumber, 3, 0);
+//                lock_acquire(SE);
+//                
+//                message(REGION2,  carnumber, 3, 0);
+//                lock_release(SW);
+//                lock_acquire(NE);
+//                lock_acquire(StoN);
+//
+//                lock_release(WtoE);
+//
+//                
+//                message(REGION3,  carnumber, 3, 0);
+//                
+//                
                 
                 message(LEAVING,  carnumber, 3, 0);
                 lock_release(SE);
