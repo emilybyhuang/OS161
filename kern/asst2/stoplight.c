@@ -28,6 +28,16 @@ struct cv * carsCV=NULL;
 
 struct cv * straightNtoS = NULL, *straightStoN = NULL, *straightWtoE= NULL, *straightEtoW= NULL;
 int carsInIntersection = 0;
+
+struct carInfo{
+    int carNum;
+    int regionNum;
+    int goStraight;
+    int turnLeft;
+    int turnRight;
+};
+
+struct carInfo carsInside[4];
 /*
  * Number of cars created.
  */
@@ -62,6 +72,16 @@ message(int msg_nr, int carnumber, int cardirection, int destdirection)
                 directions[cardirection], directions[destdirection]);
 }
  
+
+void currentLockState(unsigned long carnumber){
+    kprintf("\n\n########################\n\n");
+    kprintf("Carnumber: %lu\n", carnumber);
+    kprintf("NW held: %d\n", NW->held);
+    kprintf("NE held: %d\n", NE->held);
+    kprintf("SW held: %d\n", SW->held);
+    kprintf("SE held: %d\n", SE->held);
+    kprintf("\n\n########################\n\n");
+}
 /*
  * gostraight()
  *
@@ -99,6 +119,12 @@ gostraight(unsigned long cardirection,
         switch(cardirection){
             //N
             case 0:
+                lock_acquire(carsLock);
+                while( (carsInside[1].carNum != -1 && carsInside[1].regionNum == 1) &&
+                        (carsInside[2].carNum != -1 && carsInside[2].regionNum == 1) && 
+                        (carsInside[3].carNum != -1 && carsInside[3].regionNum == 1) ){
+                    cv_wait(carsCV, carsLock);
+                }
                 message(APPROACHING, carnumber, 0, 2);
 //                if(SW->held != isHeld || SE ->held != isHeld)lock_acquire(NW);
 //                while(SW->held == isHeld && SE ->held == isHeld){
@@ -108,26 +134,47 @@ gostraight(unsigned long cardirection,
                 
                     
                 lock_acquire(NW);
+                carsInside[0].carNum = carnumber;
+                carsInside[0].regionNum = 1;
+                carsInside[0].goStraight = 1;
+                
+                
 //                lock_acquire(SW);
                 //approching...
                 carsInIntersection++;
                 //n s
                 message(REGION1,  carnumber, 0, 2);
                 lock_acquire(SW);
-                
-                
+                carsInside[2].carNum = carnumber;
+                carsInside[2].regionNum = 2;
+                carsInside[2].goStraight = 1;
                 
                 message(REGION2,  carnumber, 0, 2);
                 lock_release(NW);
-                message(LEAVING,  carnumber, 0, 2);            
+                carsInside[0].carNum = -1;
+                carsInside[0].regionNum = -1;
+                carsInside[0].goStraight = -1;
                 
+                
+                message(LEAVING,  carnumber, 0, 2);            
                 lock_release(SW);
+                carsInside[2].carNum = -1;
+                carsInside[2].regionNum = -1;
+                carsInside[2].goStraight = -1;
                 carsInIntersection--;
+                lock_release(carsLock);
+
                 break;
                 
                 
             //E
-            case 1:                
+            case 1:
+                lock_acquire(carsLock);
+                while( (carsInside[0].carNum != -1 && carsInside[0].regionNum == 1) &&
+                        (carsInside[2].carNum != -1 && carsInside[2].regionNum == 1) && 
+                        (carsInside[3].carNum != -1 && carsInside[3].regionNum == 1) ){
+                    cv_wait(carsCV, carsLock);
+                }                
                 message(APPROACHING, carnumber, 1, 3);
 //                if(NW->held != isHeld || SW ->held != isHeld)lock_acquire(NE);
 //                while(NW->held == isHeld && SW ->held == isHeld){
@@ -135,18 +182,33 @@ gostraight(unsigned long cardirection,
 //                }
                 
                 lock_acquire(NE);
+                carsInside[1].carNum = carnumber;
+                carsInside[1].regionNum = 1;
+                carsInside[1].goStraight = 1;
                 carsInIntersection++;
 //                lock_acquire(NW);
                 // e w
                 message(REGION1,  carnumber, 1, 3);
                 lock_acquire(NW);
+               
+                carsInside[0].carNum = carnumber;
+                carsInside[0].regionNum = 2;
+                carsInside[0].goStraight = 1;
+                
                 message(REGION2,  carnumber, 1, 3);
                 lock_release(NE);
+                carsInside[1].carNum = -1;
+                carsInside[1].regionNum = -1;
+                carsInside[1].goStraight = -1;
+                
                 
                 message(LEAVING,  carnumber, 1, 3);
                 lock_release(NW);
+                carsInside[0].carNum = -1;
+                carsInside[0].regionNum = -1;
+                carsInside[0].goStraight = -1;
                 carsInIntersection--;
-                
+                lock_release(carsLock);
                 
                 
                 
@@ -160,55 +222,96 @@ gostraight(unsigned long cardirection,
             case 2:
 
                 message(APPROACHING, carnumber, 2, 0);
+                lock_acquire(carsLock);
+                while( (carsInside[0].carNum != -1 && carsInside[0].regionNum == 1) &&
+                        (carsInside[2].carNum != -1 && carsInside[2].regionNum == 1) && 
+                        (carsInside[1].carNum != -1 && carsInside[1].regionNum == 1) ){
+                    cv_wait(carsCV, carsLock);
+                } 
 //                if(NE->held != isHeld || NW ->held != isHeld)lock_acquire(SE);
 //                while(NE->held == isHeld && NW ->held == isHeld){
 //                    cv_wait(straightStoN, SE);
 //                }
                 
                 lock_acquire(SE);
+                carsInside[3].carNum = carnumber;
+                carsInside[3].regionNum = 1;
+                carsInside[3].goStraight = 1;
+                
                 carsInIntersection++;
 //                lock_acquire(NE);
                 //s w
                 message(REGION1,  carnumber, 2, 0);
                 lock_acquire(NE);
-                
+                carsInside[1].carNum = carnumber;
+                carsInside[1].regionNum = 1;
+                carsInside[1].goStraight = 1;
                 
                 message(REGION2,  carnumber, 2, 0);
                 lock_release(SE);
+                carsInside[3].carNum = -1;
+                carsInside[3].regionNum = -1;
+                carsInside[3].goStraight = -1;
                 message(LEAVING,  carnumber, 2, 0);
                 
                 lock_release(NE);
+                carsInside[1].carNum = -1;
+                carsInside[1].regionNum = -1;
+                carsInside[1].goStraight = -1;
                 carsInIntersection--;
+                lock_release(carsLock);
                 break;
                 
                 
             //W
             case 3:
                 message(APPROACHING, carnumber, 3, 1);
+                lock_acquire(carsLock);
+                while( (carsInside[0].carNum != -1 && carsInside[0].regionNum == 1) &&
+                        (carsInside[1].carNum != -1 && carsInside[1].regionNum == 1) && 
+                        (carsInside[3].carNum != -1 && carsInside[3].regionNum == 1) ){
+                    cv_wait(carsCV, carsLock);
+                } 
 //                if(SE->held != isHeld || NE ->held != isHeld)lock_acquire(SW);
 //                while(SE->held == isHeld && NE ->held == isHeld){
 //                    cv_wait(straightWtoE, SW);
 //                }
                 carsInIntersection++;
                 lock_acquire(SW);
-                lock_acquire(SE);
-                       
+                carsInside[2].carNum = carnumber;
+                carsInside[2].regionNum = 1;
+                carsInside[2].goStraight = 1;
+//                lock_acquire(SE);
+//                       
                 //w e
                 message(REGION1,  carnumber, 3, 1);
                 lock_acquire(SE);
+                carsInside[3].carNum = carnumber;
+                carsInside[3].regionNum = 2;
+                carsInside[3].goStraight = 1;
                 
                 
                 message(REGION2,  carnumber, 3, 1);
                 lock_release(SW);
+                carsInside[2].carNum = -1;
+                carsInside[2].regionNum = -1;
+                carsInside[2].goStraight = -1;
+                
                 message(LEAVING,  carnumber, 3, 1);
                 
                 lock_release(SE);
+                carsInside[3].carNum = -1;
+                carsInside[3].regionNum = -1;
+                carsInside[3].goStraight = -1;
                 carsInIntersection--;
+                lock_release(carsLock);
                 break;
             default:
                 kprintf("ERROR: Unknown car direction\n");
                       
         }
+        currentLockState(carnumber);
+        kprintf("Exit switch\n");
         
 }
 
@@ -483,8 +586,8 @@ approachintersection(void * unusedpointer,
                 break;
                 
             case 1:
-                //gostraight(cardirection, carnumber);
-                turnright(cardirection, carnumber);
+                gostraight(cardirection, carnumber);
+                //turnright(cardirection, carnumber);
                 break;
             case 2:
                 //turnleft(cardirection, carnumber);
@@ -535,6 +638,11 @@ createcars(int nargs,
         if(straightWtoE == NULL)straightWtoE = cv_create("straightWtoE");
         if(straightEtoW == NULL)straightEtoW = cv_create("straightEtoW");
         if(carsCV == NULL)carsCV = cv_create("carsCV");
+        
+        int i = 0;
+        for(i = 0; i < 4 ; i++){
+            carsInside[4].carNum = -1;
+        }
         
         for (index = 0; index < NCARS; index++) {
                 error = thread_fork("approachintersection thread",
