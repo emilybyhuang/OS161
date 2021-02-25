@@ -23,7 +23,9 @@ struct lock * NW = NULL;
 struct lock * NE = NULL;
 struct lock * SW = NULL;
 struct lock * SE = NULL;
-
+int fromNorthOccupied = -1, fromEastOccupied = -1,fromSouthOccupied = -1,fromWestOccupied = -1;
+struct lock * fromNorth = NULL, * fromEast = NULL,* fromSouth = NULL,* fromWest = NULL;
+struct cv * cvFromNorth = NULL, * cvFromEast = NULL, * cvFromWest = NULL,* cvFromSouth = NULL;
 /*
  * Number of cars created.
  */
@@ -113,16 +115,19 @@ gostraight(unsigned long cardirection,
                 
                 lock_acquire(SW);
                 lock_acquire(NW);
+                
               
                 message(REGION1,  carnumber, 0, 2);
+                fromNorthOccupied = -1;//no longer waiting to enter
+                
+                
                 message(REGION2,  carnumber, 0, 2);
-                
-                
-               
+
                 message(LEAVING,  carnumber, 0, 2); 
 
                 lock_release(SW);
                 lock_release(NW);
+                
 
                 break;
                 
@@ -136,6 +141,7 @@ gostraight(unsigned long cardirection,
                 lock_acquire(NW);
                 
                 message(REGION1,  carnumber, 1, 3);
+                fromEastOccupied = -1;
                 message(REGION2,  carnumber, 1, 3);
                 
                 
@@ -156,6 +162,7 @@ gostraight(unsigned long cardirection,
                 lock_acquire(SE);
 
                 message(REGION1,  carnumber, 2, 0);
+                fromSouthOccupied = -1;
                 message(REGION2,  carnumber, 2, 0);
                 
                 
@@ -175,6 +182,7 @@ gostraight(unsigned long cardirection,
                 lock_acquire(SW);
 
                 message(REGION1,  carnumber, 3, 1);
+                fromWestOccupied = -1;
                 message(REGION2,  carnumber, 3, 1);
                 
                 message(LEAVING,  carnumber, 3, 1);
@@ -233,6 +241,7 @@ turnleft(unsigned long cardirection,
                 lock_acquire(NW);
                 
                 message(REGION1,  carnumber, 0, 1);
+                fromNorthOccupied = -1;
                 message(REGION2,  carnumber, 0, 1);
                
                 
@@ -245,25 +254,28 @@ turnleft(unsigned long cardirection,
                 lock_release(SW);
                 lock_release(NW);
                 
+                
                 break;
                 
             //E
             case 1:
                 message(APPROACHING, carnumber, 1, 2);
 
-                lock_acquire(NE);
+                
                 lock_acquire(SW);
                 lock_acquire(NW);
+                lock_acquire(NE);
                 message(REGION1,  carnumber, 1, 2);
+                fromEastOccupied = -1;
                 message(REGION2,  carnumber, 1, 2);
                 
                 
 
                 message(REGION3,  carnumber, 1, 2);
                 message(LEAVING,  carnumber, 1, 2);
-                lock_release(NE);
                 lock_release(SW);
                 lock_release(NW);
+                lock_release(NE);
                 
                 break;
             //S
@@ -274,10 +286,8 @@ turnleft(unsigned long cardirection,
                 lock_acquire(SE);
                 lock_acquire(NW);
                 message(REGION1,  carnumber, 1, 2);
+                fromSouthOccupied = -1;
                 message(REGION2,  carnumber, 1, 2);
-                
-                
-
                 message(REGION3,  carnumber, 1, 2);
                 message(LEAVING,  carnumber, 1, 2);
                 lock_release(NE);
@@ -291,6 +301,7 @@ turnleft(unsigned long cardirection,
                 lock_acquire(SE);
                 lock_acquire(SW);
                 message(REGION1,  carnumber, 3, 0);
+                fromWestOccupied = -1;
                 message(REGION2,  carnumber, 3, 0);
                 
                 
@@ -350,6 +361,7 @@ turnright(unsigned long cardirection,
                 lock_acquire(NW);
                 //n w
                 message(REGION1,  carnumber, 0, 3);
+                fromNorthOccupied = -1;
                 message(LEAVING,  carnumber, 0, 3);
                 
                 
@@ -364,6 +376,7 @@ turnright(unsigned long cardirection,
                 lock_acquire(NE);
                 // e n
                 message(REGION1,  carnumber, 1, 0);
+                fromEastOccupied = -1;
                 message(LEAVING,  carnumber, 1, 0);
                 
                 
@@ -376,6 +389,7 @@ turnright(unsigned long cardirection,
                 lock_acquire(SE);
                 
                 message(REGION1,  carnumber, 2, 1);
+                fromSouthOccupied = -1;
                 message(LEAVING,  carnumber, 2, 1);
                 
                 lock_release(SE);
@@ -388,6 +402,7 @@ turnright(unsigned long cardirection,
                 lock_acquire(SW);
                 
                 message(REGION1,  carnumber, 3, 2);
+                fromWestOccupied = -1;
                 message(LEAVING,  carnumber, 3, 2);
                 
                 lock_release(SW);
@@ -439,35 +454,103 @@ approachintersection(void * unusedpointer,
         (void) turnleft;
         (void) turnright;
 
-        /*
-         * cardirection is set randomly.
-         */
-
         cardirection = random() % 4;
         int carTurnOrStraight = random() %3;
         //lock_acquire(carsLock);
-        switch(carTurnOrStraight){
+        switch(cardirection){
             case 0:
-                //turnright(cardirection, carnumber);
-                gostraight(cardirection, carnumber);
-                //turnleft(cardirection, carnumber);
+                lock_acquire(fromNorth);
+                if(fromNorthOccupied == 1){
+                    cv_wait(cvFromNorth, fromNorth);
+                }
+                fromNorthOccupied = 1;
+                switch(carTurnOrStraight){
+                    case 0:
+                        gostraight(cardirection, carnumber);
+                        break;
+
+                    case 1:
+                        turnleft(cardirection, carnumber);
+                        
+                        break;
+                    case 2:
+                        turnright(cardirection, carnumber);
+                        break;
+                    default:
+                        kprintf("Error in approaching interstion\n");
+                }
+                lock_release(fromNorth);
                 break;
-                
             case 1:
-                //turnright(cardirection, carnumber);
-                //gostraight(cardirection, carnumber);
-                turnleft(cardirection, carnumber);
+                lock_acquire(fromEast);
+                if(fromEastOccupied == 1){
+                    cv_wait(cvFromEast, fromEast);
+                }
+                fromEastOccupied = 1;
+                switch(carTurnOrStraight){
+                    case 0:
+                        gostraight(cardirection, carnumber);
+                        break;
+                    case 1:
+                        turnleft(cardirection, carnumber);
+                        break;
+                    case 2:
+                        turnright(cardirection, carnumber);
+                        break;
+                    default:
+                        kprintf("Error in approaching interstion\n");
+                }
+                lock_release(fromEast);
                 break;
             case 2:
-                turnright(cardirection, carnumber);
-                //gostraight(cardirection, carnumber);
-                //turnleft(cardirection, carnumber);
+                lock_acquire(fromSouth);
+                if(fromSouthOccupied == 1){
+                    cv_wait(cvFromSouth, fromSouth);
+                }
+                fromSouthOccupied = 1;
+                switch(carTurnOrStraight){
+                    case 0:
+                        gostraight(cardirection, carnumber);
+                        break;
+                    case 1:
+                        turnleft(cardirection, carnumber);
+                        lock_release(fromSouth); 
+                        break;
+                    case 2:
+                        turnright(cardirection, carnumber);
+                        lock_release(fromSouth); 
+                        break;
+                    default:
+                        kprintf("Error in approaching interstion\n");
+                }
+                lock_release(fromSouth);
                 break;
-            default:
-                kprintf("Error in approaching interstion\n");
-                      
-                
+            case 3:
+                lock_acquire(fromWest);
+                if(fromWestOccupied == 1){
+                    cv_wait(cvFromWest, fromWest);
+                }
+                fromWestOccupied = 1;
+                switch(carTurnOrStraight){
+                    case 0:
+                        gostraight(cardirection, carnumber);
+                        lock_release(fromWest);
+                        break;
+                    case 1:
+                        turnleft(cardirection, carnumber);
+                        lock_release(fromWest);
+                        break;
+                    case 2:
+                        turnright(cardirection, carnumber);
+                        lock_release(fromWest);
+                        break;
+                    default:
+                        kprintf("Error in approaching interstion\n");
+                }
+                lock_release(fromWest);
+                break;               
         }
+        thread_exit();
         //lock_release(carsLock);
 }
 
@@ -501,8 +584,14 @@ createcars(int nargs,
         if(NE == NULL)NE=lock_create("NE lock");
         if(SW == NULL)SW=lock_create("SW lock");
         if(SE == NULL)SE=lock_create("SE lock");
-
-        
+        if(fromNorth == NULL)fromNorth = lock_create("fromNorth");
+        if(fromEast == NULL)fromEast = lock_create("fromEast");
+        if(fromSouth == NULL)fromSouth = lock_create("fromSouth");
+        if(fromWest == NULL)fromWest = lock_create("fromWest");
+        if(cvFromNorth == NULL)cvFromNorth = cv_create("cvFromNorth");
+        if(cvFromEast == NULL)cvFromEast = cv_create("cvFromEast");
+        if(cvFromWest == NULL)cvFromWest = cv_create("cvFromWest");
+        if(cvFromSouth == NULL)cvFromSouth = cv_create("cvFromSouth");
         
         for (index = 0; index < NCARS; index++) {
             
