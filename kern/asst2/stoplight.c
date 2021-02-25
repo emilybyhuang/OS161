@@ -23,9 +23,7 @@ struct lock * NW = NULL;
 struct lock * NE = NULL;
 struct lock * SW = NULL;
 struct lock * SE = NULL;
-struct lock * NtoS= NULL, * StoN= NULL, *WtoE= NULL, *EtoW= NULL;
-struct lock * goStraight = NULL;
-struct cv * waitNtoS = NULL,* waitStoN= NULL, *waitWtoE= NULL, *waitEtoW= NULL;
+
 
 /*
  * Number of cars created.
@@ -61,16 +59,6 @@ message(int msg_nr, int carnumber, int cardirection, int destdirection)
                 directions[cardirection], directions[destdirection]);
 }
  
-
-void currentLockState(unsigned long carnumber){
-    kprintf("\n\n########################\n\n");
-    kprintf("Carnumber: %lu\n", carnumber);
-    kprintf("NW held: %d\n", NW->held);
-    kprintf("NE held: %d\n", NE->held);
-    kprintf("SW held: %d\n", SW->held);
-    kprintf("SE held: %d\n", SE->held);
-    kprintf("\n\n########################\n\n");
-}
 /*
  * gostraight()
  *
@@ -87,7 +75,7 @@ void currentLockState(unsigned long carnumber){
  *      intersection from any direction.
  *      Write and comment this function.
  */
-
+unsigned long isHeld = 1;
 static
 void
 gostraight(unsigned long cardirection,
@@ -102,143 +90,100 @@ gostraight(unsigned long cardirection,
         
         //directions[] is char
         //passing in the index
-//        currentLockState(carnumber);
+        
         
         switch(cardirection){
-            
-            
             //N
             case 0:
-                
                 message(APPROACHING, carnumber, 0, 2);
-                while(WtoE->held == 1 || EtoW->held == 0){
-                    //wait to boss the entire NtoS portion hahaha
-                    cv_wait(waitNtoS, NtoS);
+                while(SW->held == isHeld && SE ->held == isHeld){
+                    cv_wait(straightNtoS, NW);
                 }
-                //lock_acquire(NtoS);
+                    
+//                lock_acquire(NW);
                 lock_acquire(SW);
-                lock_acquire(NW);
+                //approching...
                 
-//                lock_acquire(goStraight);
-
-                
+                //n s
                 message(REGION1,  carnumber, 0, 2);
-                message(REGION2,  carnumber, 0, 2);
+                lock_acquire(SW);
+                
                 lock_release(NW);
-               
-                message(LEAVING,  carnumber, 0, 2); 
                 
+                message(REGION2,  carnumber, 0, 2);
+                message(LEAVING,  carnumber, 0, 2);            
                 
-
-                
-                //lock_release(NW);
                 lock_release(SW);
                 
-//                lock_release(goStraight);
-
-                lock_release(NtoS);
                 break;
                 
                 
             //E
-            case 1:            
-                
-                
+            case 1:                
                 message(APPROACHING, carnumber, 1, 3);
-                while(NtoS->held == 1 || StoN->held == 0){
-                    //wait to boss the entire NtoS portion hahaha
-                    cv_wait(waitEtoW, EtoW);
-                }
-                lock_acquire(NW);
                 lock_acquire(NE);
-                lock_acquire(EtoW);
-                //lock_acquire(goStraight);
-                
+                lock_acquire(NW);
+                // e w
                 message(REGION1,  carnumber, 1, 3);
                 
                 
-                
-                
-                message(REGION2,  carnumber, 1, 3);
                 lock_release(NE);
                 
+                message(REGION2,  carnumber, 1, 3);
                 message(LEAVING,  carnumber, 1, 3);
-
-                                                
-                //lock_release(NE);
+                
                 lock_release(NW);
-
-                lock_release(EtoW);
-                //lock_release(goStraight);
-
+                
+                
+                
+                
+                
+                
+                
                 break;
                 
                 
             //S
             case 2:
 
-                message(APPROACHING, carnumber, 2, 0);
-                while(WtoE->held == 1 || EtoW->held == 0){
-                    //wait to boss the entire NtoS portion hahaha
-                    cv_wait(waitStoN, StoN);
-                }
-                lock_acquire(NE);
+                                message(APPROACHING, carnumber, 2, 0);
+
                 lock_acquire(SE);
-                //lock_acquire(goStraight);
-                lock_acquire(StoN);
+                lock_acquire(NE);
                 //s w
                 message(REGION1,  carnumber, 2, 0);
-                
-                
-                
                 message(REGION2,  carnumber, 2, 0);
-                lock_release(SE);
-                
-                
                 message(LEAVING,  carnumber, 2, 0);
-                                                
-//                lock_release(SE);
+                lock_release(SE);
                 lock_release(NE);
-
-                lock_release(StoN);
-                //lock_release(goStraight);
-
+                
                 break;
                 
                 
             //W
             case 3:
                 message(APPROACHING, carnumber, 3, 1);
-                while(NtoS->held == 1 || StoN->held == 0){
-                    //wait to boss the entire NtoS portion hahaha
-                    cv_wait(waitWtoE, WtoE);
+                while(){
+                    
                 }
-                lock_acquire(SE);
                 lock_acquire(SW);
-                lock_acquire(WtoE);
-                
-                lock_acquire(goStraight);
+                lock_acquire(SE);
                        
                 //w e
                 message(REGION1,  carnumber, 3, 1);
-
-                message(REGION2,  carnumber, 3, 1);
+                
+                
                 lock_release(SW);
+                message(REGION2,  carnumber, 3, 1);
                 message(LEAVING,  carnumber, 3, 1);
-                                                
-//                lock_release(SW);
+                
                 lock_release(SE);
-
-                lock_release(WtoE);
-                //lock_release(goStraight);
                 
                 break;
             default:
                 kprintf("ERROR: Unknown car direction\n");
                       
         }
-        currentLockState(carnumber);
-        kprintf("Exit switch\n");
         
 }
 
@@ -280,29 +225,21 @@ turnleft(unsigned long cardirection,
                 
                 message(APPROACHING, carnumber, 0, 1);
                 lock_acquire(NW);
-                lock_acquire(NtoS);
+                
                 
                 //w e
                 
                 message(REGION1,  carnumber, 0, 1);
                 lock_acquire(SW);
-                
-                message(REGION2,  carnumber, 0, 1);
                 lock_release(NW);
-                
-                
+                message(REGION2,  carnumber, 0, 1);
                 lock_acquire(SE);
-                lock_acquire(WtoE);
-                lock_release(NtoS);
-                
-                message(REGION3,  carnumber, 0, 1);
-                
-                message(LEAVING,  carnumber, 0, 1);
                 lock_release(SW);
-
+                message(REGION3,  carnumber, 0, 1);
+                message(LEAVING,  carnumber, 0, 1);
+                
                 
                 lock_release(SE);
-                lock_release(WtoE);
                 
                 
                 
@@ -310,90 +247,68 @@ turnleft(unsigned long cardirection,
                 
             //E
             case 1:
-                message(APPROACHING, carnumber, 1, 2);
+                                message(APPROACHING, carnumber, 1, 2);
    
                 lock_acquire(NE);
                 
-                lock_acquire(EtoW);
+                
 //                //w e
                 message(REGION1,  carnumber, 1, 2);
                 lock_acquire(NW);
-                
-                
-                
-                message(REGION2,  carnumber, 1, 2);
                 lock_release(NE);
-                
+                message(REGION2,  carnumber, 1, 2);
                 lock_acquire(SW);
-                lock_acquire(NtoS);
-                lock_release(EtoW);
-                
+                lock_release(NW);
                 message(REGION3,  carnumber, 1, 2);
                 message(LEAVING,  carnumber, 1, 2);
                 
-                lock_release(NW);
-
+                
                 lock_release(SW);
-                lock_release(NtoS);
-                            
+                
+                
+                
                 break;
             //S
             case 2:
-                message(APPROACHING, carnumber, 1, 2);
+                
+                                message(APPROACHING, carnumber, 1, 2);
 
                 lock_acquire(SE);
-                lock_acquire(StoN);
+                
                 
                 //w e
                 message(REGION1,  carnumber, 1, 2);
                 lock_acquire(NE);
-                
-                
-                message(REGION2,  carnumber, 1, 2);
-                
                 lock_release(SE);
+                message(REGION2,  carnumber, 1, 2);
                 lock_acquire(NW);
-                lock_acquire(EtoW);
-
-                lock_release(StoN);
-                
-                message(REGION3,  carnumber, 1, 2);
-                
-                message(LEAVING,  carnumber, 1, 2);
                 lock_release(NE);
-
+                message(REGION3,  carnumber, 1, 2);
+                message(LEAVING,  carnumber, 1, 2);
+                
                 
                 lock_release(NW);
-                lock_release(EtoW);
                 break;
             //W
             case 3:
                                 message(APPROACHING, carnumber, 3, 0);
 
                 lock_acquire(SW);
-                lock_acquire(WtoE);
                 
                 //w e
                 message(REGION1,  carnumber, 3, 0);
                 lock_acquire(SE);
-                
-                message(REGION2,  carnumber, 3, 0);
                 lock_release(SW);
+                message(REGION2,  carnumber, 3, 0);
+                
                 lock_acquire(NE);
-                lock_acquire(StoN);
-
-                lock_release(WtoE);
-
-                
-                message(REGION3,  carnumber, 3, 0);
-                
-                
-                
-                message(LEAVING,  carnumber, 3, 0);
                 lock_release(SE);
+                message(REGION3,  carnumber, 3, 0);
+                message(LEAVING,  carnumber, 3, 0);
+                
                 
                 lock_release(NE);
-                lock_release(StoN);
+                
                 break;
             default:
                 kprintf("ERROR: Unknown car direction\n");
@@ -434,10 +349,8 @@ turnright(unsigned long cardirection,
         switch(cardirection){
             //N
             case 0:
-                
-                message(APPROACHING, carnumber, 0, 3);
+                                message(APPROACHING, carnumber, 0, 3);
 
-                
                 lock_acquire(NW);
                 //n w
                 message(REGION1,  carnumber, 0, 3);
@@ -462,7 +375,7 @@ turnright(unsigned long cardirection,
                 break;
             //S
             case 2:
-                message(APPROACHING, carnumber, 2, 1);
+                                message(APPROACHING, carnumber, 2, 1);
 
                 lock_acquire(SE);
                 
@@ -474,7 +387,7 @@ turnright(unsigned long cardirection,
                 break;
             //W
             case 3:
-                message(APPROACHING, carnumber, 3, 2);
+                                message(APPROACHING, carnumber, 3, 2);
 
                 lock_acquire(SW);
                 
@@ -539,18 +452,16 @@ approachintersection(void * unusedpointer,
         
         switch(carTurnOrStraight){
             case 0:
-                //turnright(cardirection, carnumber);
                 gostraight(cardirection, carnumber);
                 break;
                 
             case 1:
-                //turnright(cardirection, carnumber);
                 gostraight(cardirection, carnumber);
+                //turnright(cardirection, carnumber);
                 break;
             case 2:
-                //turnright(cardirection, carnumber);
-                gostraight(cardirection, carnumber);
                 //turnleft(cardirection, carnumber);
+                gostraight(cardirection, carnumber);
                 break;
             default:
                 kprintf("Error in approaching interstion\n");
@@ -589,19 +500,9 @@ createcars(int nargs,
         if(NE == NULL)NE=lock_create("NE lock");
         if(SW == NULL)SW=lock_create("SW lock");
         if(SE == NULL)SE=lock_create("SE lock");
-        if(NtoS == NULL)NtoS=lock_create("NtoS lock");
-        if(StoN == NULL)StoN=lock_create("StoN lock");
-        if(WtoE == NULL)WtoE=lock_create("WtoE lock");
-        if(EtoW == NULL)EtoW=lock_create("EtoW lock");
-        if(waitNtoS == NULL)waitNtoS=cv_create("wait NtoS");
-        if(waitStoN == NULL)waitStoN=cv_create("wait StoN");
-        if(waitWtoE == NULL)waitWtoE=cv_create("wait WtoE");
-        if(waitEtoW == NULL)waitEtoW=cv_create("wait EtoW");        
-        if(goStraight == NULL)goStraight = lock_create("go straight lock");
         
         
         for (index = 0; index < NCARS; index++) {
-            
                 error = thread_fork("approachintersection thread",
                                     NULL, index, approachintersection, NULL);
 
