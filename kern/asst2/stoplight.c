@@ -475,8 +475,8 @@ approachintersection(void * unusedpointer,
         cardirection = random() % 4;
         int carTurnOrStraight = random() %3;
         
-        lock_acquire(carsLock);
-        while(carsInIntersection>=3)cv_wait(carsCV, carsLock);
+//        lock_acquire(carsLock);
+//        while(carsInIntersection>=3)cv_wait(carsCV, carsLock);
         switch(carTurnOrStraight){
             case 0:
                 gostraight(cardirection, carnumber);
@@ -495,7 +495,7 @@ approachintersection(void * unusedpointer,
                       
                 
         }
-        lock_release(carsLock);
+        //lock_release(carsLock);
 }
 
 
