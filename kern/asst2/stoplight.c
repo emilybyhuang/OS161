@@ -17,6 +17,7 @@
 #include <test.h>
 #include <thread.h>
 #include <synch.h>
+#include <queue.h>
 
 //locks:
 struct lock * NW = NULL;
@@ -26,6 +27,13 @@ struct lock * SE = NULL;
 int fromNorthOccupied = -1, fromEastOccupied = -1,fromSouthOccupied = -1,fromWestOccupied = -1;
 struct lock * fromNorth = NULL, * fromEast = NULL,* fromSouth = NULL,* fromWest = NULL;
 struct cv * cvFromNorth = NULL, * cvFromEast = NULL, * cvFromWest = NULL,* cvFromSouth = NULL;
+
+//make queues for cars to go in order
+struct queue *fromNorthQueue;
+struct queue *fromEastQueue;
+struct queue *fromSouthQueue;
+struct queue *fromWestQueue;
+
 /*
  * Number of cars created.
  */
