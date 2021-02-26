@@ -146,9 +146,9 @@ gostraight(unsigned long cardirection,
                 
                 
                 message(LEAVING,  carnumber, 1, 3);
-
-                lock_release(NW);
                 lock_release(NE);
+                lock_release(NW);
+                
 
                 break;
                 
@@ -261,10 +261,10 @@ turnleft(unsigned long cardirection,
             case 1:
                 message(APPROACHING, carnumber, 1, 2);
 
-                
+                lock_acquire(NE);
                 lock_acquire(SW);
                 lock_acquire(NW);
-                lock_acquire(NE);
+                
                 message(REGION1,  carnumber, 1, 2);
                 fromEastOccupied = -1;
                 message(REGION2,  carnumber, 1, 2);
@@ -273,9 +273,10 @@ turnleft(unsigned long cardirection,
 
                 message(REGION3,  carnumber, 1, 2);
                 message(LEAVING,  carnumber, 1, 2);
+                lock_release(NE);
                 lock_release(SW);
                 lock_release(NW);
-                lock_release(NE);
+                
                 
                 break;
             //S
