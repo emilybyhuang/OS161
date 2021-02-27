@@ -29,10 +29,13 @@ struct lock * fromNorth = NULL, * fromEast = NULL,* fromSouth = NULL,* fromWest 
 struct cv * cvFromNorth = NULL, * cvFromEast = NULL, * cvFromWest = NULL,* cvFromSouth = NULL;
 
 //make queues for cars to go in order
-struct queue *fromNorthQueue;
-struct queue *fromEastQueue;
-struct queue *fromSouthQueue;
-struct queue *fromWestQueue;
+//struct queue *fromNorthQueue;
+//struct queue *fromEastQueue;
+//struct queue *fromSouthQueue;
+//struct queue *fromWestQueue;
+struct queue * enteringQueue[4];
+struct lock * enteringLock[4];
+struct cv * enteringCV[4];
 
 /*
  * Number of cars created.
@@ -263,16 +266,11 @@ turnleft(unsigned long cardirection,
             //E
             case 1:
                 message(APPROACHING, carnumber, 1, 2);
-
                 lock_acquire(NE);
                 lock_acquire(SW);
                 lock_acquire(NW);
-                
                 message(REGION1,  carnumber, 1, 2);
                 message(REGION2,  carnumber, 1, 2);
-                
-                
-
                 message(REGION3,  carnumber, 1, 2);
                 message(LEAVING,  carnumber, 1, 2);
                 lock_release(NE);
@@ -283,15 +281,15 @@ turnleft(unsigned long cardirection,
                 break;
             //S
             case 2:
-                message(APPROACHING, carnumber, 1, 2);
+                message(APPROACHING, carnumber, 2, 3);
 
                 lock_acquire(NE);
                 lock_acquire(SE);
                 lock_acquire(NW);
-                message(REGION1,  carnumber, 1, 2);
-                message(REGION2,  carnumber, 1, 2);
-                message(REGION3,  carnumber, 1, 2);
-                message(LEAVING,  carnumber, 1, 2);
+                message(REGION1,  carnumber, 2, 3);
+                message(REGION2,  carnumber, 2, 3);
+                message(REGION3,  carnumber, 2, 3);
+                message(LEAVING,  carnumber, 2, 3);
                 lock_release(NE);
                 lock_release(SE);
                 lock_release(NW);
@@ -454,7 +452,38 @@ approachintersection(void * unusedpointer,
         cardirection = random() % 4;
         int carTurnOrStraight = random() %3;
         //lock_acquire(carsLock);
+        
+        //before the car enters: check if the queue is empty(so this car is head): 
+        //if it is, just go, else yield for other cars 
+        
+        //always put it into the queue and only let the first car to arrive go
+        int * firstCar;
+        
+        lock_acquire(enteringLock[cardirection]);
+        
+        //kprintf("In car direction lock\n");
+        
+        q_addtail(enteringQueue[cardirection],&carnumber);
+                
+        firstCar = q_getguy(enteringQueue[cardirection], q_getstart(enteringQueue[cardirection]));
+        
+        while((unsigned long)*firstCar != carnumber){//if not head
+            //wait tille you are head
+            cv_wait(enteringCV[cardirection], enteringLock[cardirection]);
+           
+            firstCar = q_getguy(enteringQueue[cardirection], q_getstart(enteringQueue[cardirection]));
+            kprintf("Checking against first car: %d  I'm: %d\n", *firstCar, (int)carnumber);
+        }
+        
+        kprintf("I'm head! %d\n", (int)*firstCar);
+        //by this point this is the first car so pop off head
+        q_remhead(enteringQueue[cardirection]);
+
+        //kprintf("Leaving direction lock\n");
+
+        //this carnumber is free to go
         switch(cardirection){
+            //going from north
             case 0:
                 lock_acquire(fromNorth);
                 switch(carTurnOrStraight){
@@ -533,6 +562,10 @@ approachintersection(void * unusedpointer,
                 lock_release(fromWest);
                 break;               
         }
+        lock_release(enteringLock[cardirection]);
+//        lock_acquire(enteringLock[cardirection]);
+//        q_remhead(enteringQueue[cardirection]);
+//        lock_release(enteringLock[cardirection]);
         thread_exit();
         //lock_release(carsLock);
 }
@@ -571,6 +604,17 @@ createcars(int nargs,
         if(fromEast == NULL)fromEast = lock_create("fromEast");
         if(fromSouth == NULL)fromSouth = lock_create("fromSouth");
         if(fromWest == NULL)fromWest = lock_create("fromWest");
+        //I can have at max NCARS of cars waiting at one intersection
+//        fromNorthQueue = q_create(NCARS);
+//        fromEastQueue = q_create(NCARS);
+//        fromSouthQueue = q_create(NCARS);
+//        fromWestQueue = q_create(NCARS);
+        int i;
+        for(i = 0; i < 4; i++){
+            enteringQueue[i] = q_create(NCARS);
+            enteringLock[i]=lock_create("incoming lock");
+            enteringCV[i] = cv_create("incoming cv");
+        }
         
         
         for (index = 0; index < NCARS; index++) {
